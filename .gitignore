@@ -1,0 +1,11 @@
+# Ignore all node_modules folders anywhere
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+# Optional: ignore build artifacts
+dist/
+build/
+
+# Optional: ignore environment files
+.env
+.env.local

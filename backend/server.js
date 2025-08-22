@@ -4,7 +4,7 @@ const helmet = require("helmet");
 require("dotenv").config();
 const connectDB = require("./config/db");
 
-const app = express();
+//const app = express();
 
 // Connect to MongoDB
 connectDB();
@@ -60,3 +60,4 @@ app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+

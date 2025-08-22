@@ -7,7 +7,7 @@ const connectDB = require("./config/db");
 //const app = express();
 
 // Connect to MongoDB
-connectDB();
+//connectDB();
 
 // Simple request logger for debugging
 app.use((req, res, next) => {

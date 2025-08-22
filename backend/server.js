@@ -4,16 +4,16 @@ const helmet = require("helmet");
 require("dotenv").config();
 const connectDB = require("./config/db");
 
-//const app = express();
+const app = express();
 
-// Connect to MongoDB
-//connectDB();
+Connect to MongoDB
+connectDB();
 
 // Simple request logger for debugging
-// //app.use((req, res, next) => {
-//   console.log(new Date().toISOString(), req.method, req.originalUrl);
-//   next();
-// });
+app.use((req, res, next) => {
+  console.log(new Date().toISOString(), req.method, req.originalUrl);
+  next();
+});
 
 // Security
 app.use(helmet({ crossOriginResourcePolicy: false }));
@@ -60,4 +60,5 @@ app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
 

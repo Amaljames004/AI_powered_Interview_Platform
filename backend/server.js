@@ -10,10 +10,10 @@ const connectDB = require("./config/db");
 //connectDB();
 
 // Simple request logger for debugging
-app.use((req, res, next) => {
-  console.log(new Date().toISOString(), req.method, req.originalUrl);
-  next();
-});
+// //app.use((req, res, next) => {
+//   console.log(new Date().toISOString(), req.method, req.originalUrl);
+//   next();
+// });
 
 // Security
 app.use(helmet({ crossOriginResourcePolicy: false }));

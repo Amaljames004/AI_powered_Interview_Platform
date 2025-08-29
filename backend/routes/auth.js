@@ -4,13 +4,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Candidate = require("../models/Candidate");
+const CompanyProfile = require("../models/CompanyProfile");
 
-let CompanyProfile;
-try {
-  CompanyProfile = require("../models/CompanyProfile");
-} catch {
-  CompanyProfile = null; // optional
-}
 
 const router = express.Router();
 
@@ -20,7 +15,7 @@ function normalizeRole(raw) {
   if (["candidate", "student", "user"].includes(r)) return "candidate";
   if (["company", "recruiter", "employer"].includes(r)) return "recruiter";
   if (["admin", "administrator"].includes(r)) return "admin";
-  return null;
+  return "candidate"; // fallback
 }
 
 /**
@@ -28,107 +23,106 @@ function normalizeRole(raw) {
  */
 router.post("/register", async (req, res) => {
   try {
-    const name = req.body.name || `${req.body.firstName || ""} ${req.body.lastName || ""}`.trim();
-    const email = req.body.email?.trim().toLowerCase();
-    const password = req.body.password;
-    const rawRole = req.body.role;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email, and password are required" });
-    }
+    const {
+      firstName,
+      middleName,
+      lastName,
+      companyName,
+      email,
+      password,
+      role: rawRole,
+    } = req.body;
 
     const role = normalizeRole(rawRole);
-    if (!role) {
-      return res.status(400).json({ message: "Invalid role specified" });
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
     }
 
-    // Check for existing user
-    const exists = await User.findOne({ email });
-    if (exists) {
-      return res.status(400).json({ message: "Email already registered" });
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create base user document
-    const user = await User.create({
-      role,
+    let name = "";
+    if (role === "candidate") {
+      if (!firstName || !lastName) {
+        return res
+          .status(400)
+          .json({ message: "First and last name are required for candidates" });
+      }
+      name = [firstName, middleName, lastName].filter(Boolean).join(" ");
+    }
+
+    if (role === "recruiter") {
+      if (!companyName) {
+        return res
+          .status(400)
+          .json({ message: "Company name is required for recruiters" });
+      }
+      name = companyName;
+    }
+
+    // Create user
+    const user = new User({
       name,
       email,
       password: hashedPassword,
-      isActive: role === "recruiter" ? false : true,
+      role,
     });
+    await user.save();
 
-    // Candidate profile creation
+    let candidateProfile = null;
+    let companyProfile = null;
+
+    // If candidate → create candidate profile
     if (role === "candidate") {
-      const candidate = await Candidate.create({
-        user: user._id, // required link back to User
-        college: req.body.college || "",
-        degree: req.body.degree || "",
-        graduationYear: req.body.graduationYear || null,
-        resume: req.body.resume || "",
-        skills: Array.isArray(req.body.skills)
-          ? req.body.skills
-          : req.body.skills
-          ? String(req.body.skills)
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : [],
-        badges: Array.isArray(req.body.badges) ? req.body.badges : [],
+      candidateProfile = new Candidate({
+        user: user._id,
+        firstName,
+        middleName,
+        lastName,
+        email,
       });
+      await candidateProfile.save();
 
-      user.candidateProfile = candidate._id;
+      user.candidateProfile = candidateProfile._id;
       await user.save();
     }
 
-    // Recruiter company profile creation (with check for existing)
-    if (role === "recruiter" && CompanyProfile && (req.body.companyName || req.body.company)) {
-      try {
-        let company = await CompanyProfile.findOne({ recruiter: user._id });
+    // If recruiter → create company profile
+    if (role === "recruiter") {
+      companyProfile = new CompanyProfile({
+        recruiter: user._id,
+        name: companyName,
+      });
+      await companyProfile.save();
 
-        if (!company) {
-          company = await CompanyProfile.create({
-            recruiter: user._id,
-            name: req.body.companyName || req.body.company || "",
-            logo: req.body.companyLogo || "",
-            industry: req.body.industry || "",
-            hiringPolicies: req.body.hiringPolicies || "",
-            website: req.body.website || "",
-            location: req.body.location || "",
-          });
-          console.log("Company profile created:", company._id);
-        } else {
-          console.log("Company profile already exists for recruiter:", user._id);
-        }
-
-        user.companyProfile = company._id;
-        await user.save();
-      } catch (err) {
-        console.error("Error creating or linking company profile:", err);
-      }
+      user.companyProfile = companyProfile._id;
+      await user.save();
     }
 
-    // Generate JWT token
+    // Generate JWT
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
-    // Return user info (without password)
     res.status(201).json({
-      message: "Registration successful",
+      message: "User registered successfully",
       token,
       user: {
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        isActive: user.isActive,
-        companyProfile: user.companyProfile || null,
-        candidateProfile: user.candidateProfile || null,
+        candidateProfile: candidateProfile ? candidateProfile._id : null,
+        companyProfile: companyProfile ? companyProfile._id : null,
       },
     });
   } catch (err) {
@@ -136,6 +130,7 @@ router.post("/register", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 /**
  * POST /api/auth/login
@@ -149,7 +144,6 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
-    // Find user with password, populate candidate and company profiles
     const user = await User.findOne({ email }).select("+password")
       .populate("candidateProfile")
       .populate("companyProfile");
@@ -163,7 +157,6 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Create JWT token
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET,

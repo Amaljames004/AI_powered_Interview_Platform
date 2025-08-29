@@ -9,26 +9,32 @@ const candidateSchema = new mongoose.Schema(
       unique: true,
     },
 
-    // Basic Profile Info
-    fullName: { type: String, trim: true }, // Optional if you want separate from User.name
+    firstName: { type: String, required: true, trim: true },
+    middleName: { type: String, trim: true },
+    lastName: { type: String, required: true, trim: true },
     email: { type: String, lowercase: true, trim: true },
     phoneNumber: { type: String, trim: true },
     dateOfBirth: { type: Date },
     gender: { type: String, enum: ["Male", "Female", "Other", "Prefer not to say"] },
 
-    // Social Links
-    githubUrl: { type: String, trim: true },   // GitHub profile URL
-    linkedinUrl: { type: String, trim: true }, // LinkedIn profile URL
+    githubUrl: { type: String, trim: true },
+    linkedinUrl: { type: String, trim: true },
+    portfolioUrl: { type: String, trim: true },
 
-    // Education Details
-    college: { type: String, trim: true },
-    degree: { type: String, trim: true }, // e.g. B.Tech, MCA, BSc CS
-    specialization: { type: String, trim: true }, // e.g. Computer Science
-    graduationYear: { type: Number, min: 1900, max: new Date().getFullYear() + 10 },
-    academicPercentage: { type: Number, min: 0, max: 100 }, // Aggregate %
-    backlogs: { type: Number, min: 0, default: 0 }, // Number of backlog subjects
+    education: [
+      {
+        institution: { type: String, trim: true },
+        degree: { type: String, trim: true },
+        specialization: { type: String, trim: true },
+        startDate: { type: Date },
+        endDate: { type: Date },
+        graduationYear: { type: Number, min: 1900, max: new Date().getFullYear() + 10 },
+        academicPercentage: { type: Number, min: 0, max: 100 },
+        gpa: { type: Number, min: 0, max: 10 },
+        backlogs: { type: Number, min: 0, default: 0 },
+      },
+    ],
 
-    // Contact Address
     address: {
       street: { type: String, trim: true },
       city: { type: String, trim: true },
@@ -37,32 +43,25 @@ const candidateSchema = new mongoose.Schema(
       pincode: { type: String, trim: true },
     },
 
-    // Work Experience
-    experienceYears: { type: Number, min: 0, max: 50, default: 0 },
     pastEmployers: [
       {
-        companyName: { type: String, trim: true },
-        role: { type: String, trim: true },
+        company: { type: String, trim: true },
+        position: { type: String, trim: true },
         startDate: { type: Date },
         endDate: { type: Date },
+        isCurrentJob: { type: Boolean, default: false },
+        employmentType: { type: String, enum: ["Full-time", "Part-time", "Internship", "Contract", "Freelance"] },
         description: { type: String, trim: true },
       },
     ],
+    experienceYears: { type: Number, min: 0, max: 50, default: 0 },
 
-    // Skills & Badges
-    skills: { type: [String], default: [] }, // e.g. ["JavaScript", "React"]
-    skillLevels: {
-      // Detailed skill proficiency: e.g. { "JavaScript": "Intermediate" }
-      type: Map,
-      of: String,
-    },
-    badges: { type: [String], default: [] }, // E.g. "AWS Certified"
+    skills: { type: [String], default: [] },
+    skillLevels: { type: Map, of: String },
+    badges: { type: [String], default: [] },
 
-    // Resume & Portfolio
-    resumeUrl: { type: String }, // File URL for resume
-    portfolioUrl: { type: String, trim: true }, // Personal website or project links
+    resumeUrl: { type: String },
 
-    // Certifications
     certifications: [
       {
         name: { type: String, trim: true },
@@ -74,26 +73,20 @@ const candidateSchema = new mongoose.Schema(
       },
     ],
 
-    // Projects
     projects: [
       {
         title: { type: String, trim: true },
         description: { type: String, trim: true },
         techStack: { type: [String], default: [] },
         projectUrl: { type: String, trim: true },
+        githubRepo: { type: String, trim: true },
         startDate: { type: Date },
         endDate: { type: Date },
       },
     ],
 
-    // AI Interview & Mini Project history
-    interviewHistory: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "AIInterviewLog",
-      },
-    ],
-    ProjectSubmissions: [
+    interviewHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: "AIInterviewLog" }],
+    projectSubmissions: [
       {
         projectId: { type: mongoose.Schema.Types.ObjectId, ref: "MiniProject" },
         submissionUrl: { type: String },
@@ -103,17 +96,24 @@ const candidateSchema = new mongoose.Schema(
       },
     ],
 
-    // Other recruitment info
     willingToRelocate: { type: Boolean, default: false },
     noticePeriodDays: { type: Number, default: 0 },
-    expectedCTC: { type: Number, default: 0 }, // Annual INR
-    currentCTC: { type: Number, default: 0 },  // Annual INR
+    expectedCTC: { type: Number, default: 0 },
+    currentCTC: { type: Number, default: 0 },
 
+    profileCompletedPercentage: { type: Number, min: 0, max: 100, default: 0 },
+    status: { type: String, enum: ["Draft", "Active", "Shortlisted", "Hired", "Rejected"], default: "Draft" },
+    preferredLocations: { type: [String], default: [] },
+    jobTypePreference: { type: String, enum: ["Full-time", "Internship", "Contract"], default: "Full-time" },
+    remotePreference: { type: Boolean, default: false },
+    lastLogin: { type: Date },
+    source: { type: String, trim: true },
   },
   { timestamps: true }
 );
 
-// Compound index for faster searching
-candidateSchema.index({ skills: 1, college: 1, degree: 1 });
+// ✅ Fix: Separate indexes for array fields
+candidateSchema.index({ skills: 1 });
+candidateSchema.index({ "education.college": 1, "education.degree": 1 });
 
 module.exports = mongoose.model("Candidate", candidateSchema);

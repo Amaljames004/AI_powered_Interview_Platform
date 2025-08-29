@@ -32,7 +32,7 @@ useEffect(() => {
 
   const fetchEmployees = async () => {
     try {
-      const res = await api.get('/users/employees', {
+      const res = await api.get('', {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       setEmployees(res.data.users || []);

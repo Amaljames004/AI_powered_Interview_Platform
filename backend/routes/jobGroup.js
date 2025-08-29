@@ -53,11 +53,20 @@ router.get("/", authMiddleware(["recruiter"]), async (req, res) => {
     if (!company)
       return res.status(404).json({ message: "Company not found" });
 
-    res.json(company.jobGroups);
+    res.json({
+      _id: company._id,
+      name: company.name,
+      logo: company.logo,
+      industry: company.industry,
+      website: company.website,
+      location: company.location,
+      jobGroups: company.jobGroups
+    });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 // Public GET by join code
 router.get("/public/:joinCode", async (req, res) => {

@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  // Note: backend does NOT expect role for login, so no role param here.
+  // ✅ login with profile completeness check
   const login = async (email, password) => {
     try {
       const res = await api.post('/auth/login', { email, password });
@@ -35,22 +35,37 @@ export const AuthProvider = ({ children }) => {
 
       setAuthToken(token);
       setUser(user);
-
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      // Role-based routing
-      switch (user.role) {
-        case 'admin':
-          router.push('/admin/dashboard');
-          break;
-        case 'recruiter':
-          router.push('/recruiter/dashboard'); // you might want to route recruiters somewhere
-          break;
-        case 'candidate':
+      // Role-based routing with profile completeness checks
+      if (user.role === 'candidate') {
+        try {
+          const check = await api.get('/candidate/check-profile');
+          if (!check.data.complete) {
+            router.push('/candidate-profile-setup');
+            return;
+          }
           router.push('/candidate/dashboard');
-          break;
-        default:
-          router.push('/');
+        } catch (err) {
+          console.error("Candidate profile check failed", err);
+          router.push('/candidate-profile-setup'); // fallback
+        }
+      } else if (user.role === 'recruiter') {
+        try {
+          const check = await api.get('/company-profile/check-profile');
+          if (!check.data.complete) {
+            router.push('/recruiter-profile-setup');
+            return;
+          }
+          router.push('/recruiter/dashboard');
+        } catch (err) {
+          console.error("Company profile check failed", err);
+          router.push('/recruiter-profile-setup'); // fallback
+        }
+      } else if (user.role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/');
       }
     } catch (err) {
       throw new Error(err.response?.data?.message || 'Login failed');

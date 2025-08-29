@@ -35,14 +35,7 @@ const overlayVariants = {
 function RecruiterLayout({ children }) {
   // const { user, loading: userLoading } = useCurrentUser();
 const userLoading = false;
-const user = {
-  _id: "689cb17259b396a21587e4b3",
-  role: "recruiter",
-  name: "skillhire",
-  email: "skillhire@gmail.com",
-  companyProfile: "689cb47c224a0c87b6344118",
-  isActive: true
-};
+const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { logout } = useAuth();
 
@@ -164,7 +157,7 @@ const user = {
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col md:ml-64 h-full overflow-hidden">
-          <header className="bg-white border-b gap-5 border-gray-200 py-3 px-10 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+          <header className="bg-white border-b gap-5 border-gray-200 py-3 px-10 flex justify-end items-center sticky top-0 z-10 shadow-sm">
             <div className="flex items-center space-x-4">
               {userLoading ? (
                 <div className="animate-pulse flex items-center space-x-3">

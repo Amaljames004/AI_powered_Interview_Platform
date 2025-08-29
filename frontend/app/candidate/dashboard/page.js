@@ -12,6 +12,9 @@ import {
   FiTrendingUp,
   FiAward,
   FiBriefcase,
+  FiMonitor,
+  FiUser,
+  FiMapPin,
 } from "react-icons/fi";
 import api from "@/utils/axios";
 import { useAuth } from "@/context/AuthProvider";
@@ -207,85 +210,119 @@ export default function CandidateDashboard() {
               </motion.button>
             </div>
 
-            {enrolledRecruitments.length > 0 ? (
-              <div className="space-y-4">
-                {enrolledRecruitments.map((rec) => (
-                  <motion.div
-                    key={rec._id}
-                    onClick={() => handleRecruitmentClick(rec.jobGroup?._id)}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ y: -2 }}
-                    className={`p-5 rounded-lg border cursor-pointer ${
-                      rec.status === "enrolled"
-                        ? "border-blue-200 bg-blue-50"
-                        : rec.status === "shortlisted"
-                        ? "border-green-200 bg-green-50"
-                        : rec.status === "rejected"
-                        ? "border-red-200 bg-red-50"
-                        : "border-gray-200 bg-white"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      {rec.jobGroup?.companyLogo && (
-                        <img
-                          src={rec.jobGroup.companyLogo}
-                          alt={rec.jobGroup.company}
-                          className="w-10 h-10 rounded-lg object-cover border border-gray-200"
-                        />
-                      )}
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {rec.jobGroup?.title || "Untitled Position"}
-                            </h3>
-                            <p className="text-gray-700 text-sm">
-                              {rec.jobGroup?.company || "Unknown Company"}
-                            </p>
-                          </div>
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              rec.status === "enrolled"
-                                ? "bg-blue-100 text-blue-800"
-                                : rec.status === "pending"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : rec.status === "shortlisted"
-                                ? "bg-green-100 text-green-800"
-                                : rec.status === "rejected"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {rec.status?.charAt(0).toUpperCase() +
-                              rec.status?.slice(1)}
-                          </span>
-                        </div>
+{enrolledRecruitments.length > 0 ? (
+  <div className="space-y-4">
+    {enrolledRecruitments.map((rec) => {
+      const job = rec.jobGroup;
+      const company = job?.company;
 
-                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-600">
-                          <div className="flex items-center">
-                            <FiCalendar className="mr-2 text-gray-400" />
-                            <span>
-                              {rec.createdAt
-                                ? new Date(rec.createdAt).toLocaleDateString()
-                                : "N/A"}
-                            </span>
-                          </div>
-                          {rec.jobGroup?.deadline && (
-                            <div className="flex items-center">
-                              <FiClock className="mr-2 text-gray-400" />
-                              <span>
-                                Due{" "}
-                                {new Date(rec.jobGroup.deadline).toLocaleDateString()}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+      return (
+        <motion.div
+          key={rec._id}
+          onClick={() => handleRecruitmentClick(job?._id)}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          whileHover={{ y: -2 }}
+          className={`p-5 rounded-xl border cursor-pointer transition-all ${
+            rec.status === "enrolled"
+              ? "border-blue-200 bg-blue-50 hover:shadow-md"
+              : rec.status === "shortlisted"
+              ? "border-green-200 bg-green-50 hover:shadow-md"
+              : rec.status === "rejected"
+              ? "border-red-200 bg-red-50 hover:shadow-md"
+              : "border-gray-200 bg-white hover:shadow-md"
+          }`}
+        >
+          <div className="flex items-start gap-4">
+            {/* Company Logo */}
+            {company?.logo ? (
+              <img
+                src={company.logo}
+                alt={company.name}
+                className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 font-bold">
+                {company?.name?.charAt(0) || "?"}
               </div>
+            )}
+
+            {/* Job Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 truncate">
+                    {job?.title || "Untitled Position"}
+                  </h3>
+                  <p className="text-gray-700 text-sm">{company?.name || "Unknown Company"}</p>
+                  {company?.industry && (
+                    <p className="text-xs text-gray-500">{company.industry}</p>
+                  )}
+                </div>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    rec.status === "enrolled"
+                      ? "bg-blue-100 text-blue-800"
+                      : rec.status === "pending"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : rec.status === "shortlisted"
+                      ? "bg-green-100 text-green-800"
+                      : rec.status === "rejected"
+                      ? "bg-red-100 text-red-800"
+                      : "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  {rec.status?.charAt(0).toUpperCase() + rec.status?.slice(1)}
+                </span>
+              </div>
+
+              {/* Meta Info */}
+              <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-gray-600">
+                {job?.timeline?.applicationDeadline && (
+                  <div className="flex items-center">
+                    <FiClock className="mr-2 text-gray-400" />
+                    <span>
+                      Deadline {new Date(job.timeline.applicationDeadline).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+                {job?.employmentType && (
+                  <div className="flex items-center">
+                    <FiBriefcase className="mr-2 text-gray-400" />
+                    <span>{job.employmentType}</span>
+                  </div>
+                )}
+                {job?.workMode && (
+                  <div className="flex items-center">
+                    <FiMonitor className="mr-2 text-gray-400" />
+                    <span className="capitalize">{job.workMode}</span>
+                  </div>
+                )}
+                {job?.seniority && (
+                  <div className="flex items-center">
+                    <FiUser className="mr-2 text-gray-400" />
+                    <span className="capitalize">{job.seniority}</span>
+                  </div>
+                )}
+                {job?.priority && (
+                  <div className="flex items-center">
+                    <FiTrendingUp className="mr-2 text-gray-400" />
+                    <span className="capitalize">{job.priority}</span>
+                  </div>
+                )}
+                {company?.location && (
+                  <div className="flex items-center">
+                    <FiMapPin className="mr-2 text-gray-400" />
+                    <span>{company.location}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      );
+    })}
+  </div>
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}

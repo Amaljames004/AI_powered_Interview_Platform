@@ -1,3 +1,4 @@
+
 'use client';
 import api from "@/utils/axios";
 import { useEffect, useState, useRef } from 'react';
@@ -14,7 +15,8 @@ import {
   FaGlobe,
   FaGraduationCap,
   FaCode,
-  FaMapMarkerAlt
+  FaMapMarkerAlt,
+  FaBriefcase
 } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
@@ -22,6 +24,7 @@ const tabs = [
   { key: 'personal', label: 'Personal Info', icon: <FaUser className="mr-2" /> },
   { key: 'education', label: 'Education', icon: <FaGraduationCap className="mr-2" /> },
   { key: 'skills', label: 'Skills', icon: <FaCode className="mr-2" /> },
+  { key: 'experience', label: 'Experience', icon: <FaBriefcase className="mr-2" /> },
   { key: 'resume', label: 'Resume & Links', icon: <FaFilePdf className="mr-2" /> },
   { key: 'address', label: 'Address', icon: <FaMapMarkerAlt className="mr-2" /> },
   { key: 'certifications', label: 'Certifications', icon: <FaFileWord className="mr-2" /> },
@@ -30,7 +33,69 @@ const tabs = [
 
 export default function AdvancedProfile() {
   const [candidate, setCandidate] = useState(null);
-  const [form, setForm] = useState({});
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+    dateOfBirth: "",
+    gender: "",
+    education: [{
+      institution: "",
+      degree: "",
+      specialization: "",
+      startDate: "",
+      endDate: "",
+      graduationYear: "",
+      academicPercentage: "",
+      gpa: "",
+      backlogs: 0,
+    }],
+    skills: [],
+    experiences: [{
+      company: "",
+      position: "",
+      startDate: "",
+      endDate: "",
+      isCurrentJob: false,
+      employmentType: "Full-time",
+      description: "",
+    }],
+    certifications: [{
+      name: "",
+      issuer: "",
+      issueDate: "",
+      expiryDate: "",
+      credentialId: "",
+      credentialUrl: "",
+    }],
+    projects: [{
+      title: "",
+      description: "",
+      techStack: [],
+      projectUrl: "",
+      githubRepo: "",
+      startDate: "",
+      endDate: "",
+    }],
+    githubUrl: "",
+    linkedinUrl: "",
+    portfolioUrl: "",
+    address: {
+      street: "",
+      city: "",
+      state: "",
+      country: "",
+      pincode: ""
+    },
+    willingToRelocate: false,
+    noticePeriodDays: 0,
+    expectedCTC: 0,
+    currentCTC: 0,
+    preferredLocations: [],
+    jobTypePreference: "Full-time",
+    remotePreference: false,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -38,6 +103,7 @@ export default function AdvancedProfile() {
   const [error, setError] = useState(null);
   const skillInputRef = useRef(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [newSkill, setNewSkill] = useState("");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -45,8 +111,110 @@ export default function AdvancedProfile() {
       setError(null);
       try {
         const res = await api.get("/candidate/profile");
-        setCandidate(res.data);
-        setForm(res.data);
+        const data = res.data;
+        
+        // Transform API data to match form structure
+        const transformedData = {
+          firstName: data.firstName || "",
+          lastName: data.lastName || "",
+          email: data.email || "",
+          phoneNumber: data.phoneNumber || "",
+          dateOfBirth: data.dateOfBirth ? data.dateOfBirth.split('T')[0] : "",
+          gender: data.gender || "",
+          education: data.education?.map(edu => ({
+            institution: edu.institution || "",
+            degree: edu.degree || "",
+            specialization: edu.specialization || "",
+            startDate: edu.startDate ? edu.startDate.split('T')[0] : "",
+            endDate: edu.endDate ? edu.endDate.split('T')[0] : "",
+            graduationYear: edu.graduationYear || "",
+            academicPercentage: edu.academicPercentage || "",
+            gpa: edu.gpa || "",
+            backlogs: edu.backlogs || 0,
+          })) || [{
+            institution: "",
+            degree: "",
+            specialization: "",
+            startDate: "",
+            endDate: "",
+            graduationYear: "",
+            academicPercentage: "",
+            gpa: "",
+            backlogs: 0,
+          }],
+          skills: data.skills || [],
+          experiences: data.pastEmployers?.map(exp => ({
+            company: exp.company || "",
+            position: exp.position || "",
+            startDate: exp.startDate ? exp.startDate.split('T')[0] : "",
+            endDate: exp.endDate ? exp.endDate.split('T')[0] : "",
+            isCurrentJob: exp.isCurrentJob || false,
+            employmentType: exp.employmentType || "Full-time",
+            description: exp.description || "",
+          })) || [{
+            company: "",
+            position: "",
+            startDate: "",
+            endDate: "",
+            isCurrentJob: false,
+            employmentType: "Full-time",
+            description: "",
+          }],
+          certifications: data.certifications?.map(cert => ({
+            name: cert.name || "",
+            issuer: cert.issuer || "",
+            issueDate: cert.issueDate ? cert.issueDate.split('T')[0] : "",
+            expiryDate: cert.expiryDate ? cert.expiryDate.split('T')[0] : "",
+            credentialId: cert.credentialId || "",
+            credentialUrl: cert.credentialUrl || "",
+          })) || [{
+            name: "",
+            issuer: "",
+            issueDate: "",
+            expiryDate: "",
+            credentialId: "",
+            credentialUrl: "",
+          }],
+          projects: data.projects?.map(proj => ({
+            title: proj.title || "",
+            description: proj.description || "",
+            techStack: proj.techStack || [],
+            projectUrl: proj.projectUrl || "",
+            githubRepo: proj.githubRepo || "",
+            startDate: proj.startDate ? proj.startDate.split('T')[0] : "",
+            endDate: proj.endDate ? proj.endDate.split('T')[0] : "",
+          })) || [{
+            title: "",
+            description: "",
+            techStack: [],
+            projectUrl: "",
+            githubRepo: "",
+            startDate: "",
+            endDate: "",
+          }],
+          githubUrl: data.githubUrl || "",
+          linkedinUrl: data.linkedinUrl || "",
+          portfolioUrl: data.portfolioUrl || "",
+          address: data.address || {
+            street: "",
+            city: "",
+            state: "",
+            country: "",
+            pincode: ""
+          },
+          willingToRelocate: data.willingToRelocate || false,
+          noticePeriodDays: data.noticePeriodDays || 0,
+          expectedCTC: data.expectedCTC || 0,
+          currentCTC: data.currentCTC || 0,
+          preferredLocations: data.preferredLocations || [],
+          jobTypePreference: data.jobTypePreference || "Full-time",
+          remotePreference: data.remotePreference || false,
+          resumeUrl: data.resumeUrl || "",
+          resumeText: data.resumeText || "",
+        };
+
+        setCandidate(transformedData);
+        setForm(transformedData);
       } catch (err) {
         setError(err.response?.data?.message || err.message);
       } finally {
@@ -73,15 +241,18 @@ export default function AdvancedProfile() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setForm(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
   };
 
   const handleSkillAdd = () => {
-    const skill = skillInputRef.current.value.trim();
+    const skill = newSkill.trim();
     if (!skill || (form.skills || []).includes(skill)) return;
     setForm(prev => ({ ...prev, skills: [...(prev.skills || []), skill] }));
-    skillInputRef.current.value = '';
+    setNewSkill("");
   };
 
   const handleSkillRemove = (skill) => {
@@ -104,9 +275,36 @@ export default function AdvancedProfile() {
     setSaving(true);
     setError(null);
     try {
-      const { data } = await api.put('/candidate/profile', form);
-      setCandidate(data.candidate);
-      setForm(data.candidate);
+      // Transform data back to API format
+      const payload = {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        phoneNumber: form.phoneNumber,
+        dateOfBirth: form.dateOfBirth,
+        gender: form.gender,
+        education: form.education,
+        skills: form.skills,
+        pastEmployers: form.experiences,
+        certifications: form.certifications,
+        projects: form.projects,
+        githubUrl: form.githubUrl,
+        linkedinUrl: form.linkedinUrl,
+        portfolioUrl: form.portfolioUrl,
+        address: form.address,
+        willingToRelocate: form.willingToRelocate,
+        noticePeriodDays: Number(form.noticePeriodDays) || 0,
+        expectedCTC: Number(form.expectedCTC) || 0,
+        currentCTC: Number(form.currentCTC) || 0,
+        preferredLocations: form.preferredLocations,
+        jobTypePreference: form.jobTypePreference,
+        remotePreference: form.remotePreference,
+        resumeText: form.resumeText,
+      };
+
+      const { data } = await api.put('/candidate/profile', payload);
+      setCandidate(data);
+      setForm(data);
       setEditMode(false);
     } catch (e) {
       setError(e.response?.data?.message || e.message);
@@ -121,37 +319,56 @@ export default function AdvancedProfile() {
     setError(null);
   };
 
-const handleResumeUpload = async (file) => {
-  if (!file) return;
-  try {
-    const formData = new FormData();
-    formData.append('resume', file);
+  const handleResumeUpload = async (file) => {
+    if (!file) return;
+    try {
+      const formData = new FormData();
+      formData.append('resume', file);
 
-    const config = {
-      onUploadProgress: (progressEvent) => {
-        const percentCompleted = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total
-        );
-        setUploadProgress(percentCompleted);
-      },
-    };
+      const config = {
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          setUploadProgress(percentCompleted);
+        },
+      };
 
-    const res = await api.post("/candidate/upload/resume", formData, config);
+      const res = await api.post("/candidate/upload/resume", formData, config);
 
-    // Store extracted text in form for backend
-    setForm((prev) => ({
-      ...prev,
-      resumeText: res.data.resumeText, // <-- this is the cleaned text from backend
-      resumeUrl: res.data.url || prev.resumeUrl,
-    }));
+      setForm(prev => ({
+        ...prev,
+        resumeText: res.data.resumeText,
+        resumeUrl: res.data.url || prev.resumeUrl,
+      }));
 
-    setUploadProgress(0);
-  } catch (err) {
-    setError("Failed to upload or process resume");
-    setUploadProgress(0);
-  }
-};
+      setUploadProgress(0);
+    } catch (err) {
+      setError("Failed to upload or process resume");
+      setUploadProgress(0);
+    }
+  };
 
+  const addTechStackItem = (index, tech) => {
+    const techValue = tech.trim();
+    if (!techValue) return;
+    
+    setForm(prev => {
+      const updatedProjects = [...prev.projects];
+      if (!updatedProjects[index].techStack.includes(techValue)) {
+        updatedProjects[index].techStack = [...updatedProjects[index].techStack, techValue];
+      }
+      return { ...prev, projects: updatedProjects };
+    });
+  };
+
+  const removeTechStackItem = (projectIndex, techIndex) => {
+    setForm(prev => {
+      const updatedProjects = [...prev.projects];
+      updatedProjects[projectIndex].techStack = updatedProjects[projectIndex].techStack.filter((_, idx) => idx !== techIndex);
+      return { ...prev, projects: updatedProjects };
+    });
+  };
 
   if (loading) return (
     <div className="flex items-center justify-center h-screen">
@@ -237,12 +454,19 @@ const handleResumeUpload = async (file) => {
           {activeTab === 'personal' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <InputField 
-                label="Full Name" 
-                name="fullName" 
-                value={form.fullName} 
+                label="First Name" 
+                name="firstName" 
+                value={form.firstName} 
                 onChange={handleInputChange} 
                 disabled={!editMode}
                 icon={<FaUser className="text-gray-400" />}
+              />
+              <InputField 
+                label="Last Name" 
+                name="lastName" 
+                value={form.lastName} 
+                onChange={handleInputChange} 
+                disabled={!editMode}
               />
               <InputField 
                 label="Email" 
@@ -263,7 +487,7 @@ const handleResumeUpload = async (file) => {
                 label="Date of Birth"
                 name="dateOfBirth"
                 type="date"
-                value={form.dateOfBirth ? form.dateOfBirth.split('T')[0] : ''}
+                value={form.dateOfBirth}
                 onChange={handleInputChange}
                 disabled={!editMode}
                 icon={<FaCalendarAlt className="text-gray-400" />}
@@ -276,64 +500,225 @@ const handleResumeUpload = async (file) => {
                 options={['Male', 'Female', 'Other', 'Prefer not to say']}
                 disabled={!editMode}
               />
+              <InputField
+                label="Notice Period (days)"
+                name="noticePeriodDays"
+                type="number"
+                value={form.noticePeriodDays}
+                onChange={handleInputChange}
+                disabled={!editMode}
+              />
+              <InputField
+                label="Expected CTC"
+                name="expectedCTC"
+                type="number"
+                value={form.expectedCTC}
+                onChange={handleInputChange}
+                disabled={!editMode}
+              />
+              <InputField
+                label="Current CTC"
+                name="currentCTC"
+                type="number"
+                value={form.currentCTC}
+                onChange={handleInputChange}
+                disabled={!editMode}
+              />
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="willingToRelocate"
+                  name="willingToRelocate"
+                  checked={form.willingToRelocate}
+                  onChange={handleInputChange}
+                  disabled={!editMode}
+                  className="mr-2"
+                />
+                <label htmlFor="willingToRelocate" className="text-gray-700">
+                  Willing to relocate
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="remotePreference"
+                  name="remotePreference"
+                  checked={form.remotePreference}
+                  onChange={handleInputChange}
+                  disabled={!editMode}
+                  className="mr-2"
+                />
+                <label htmlFor="remotePreference" className="text-gray-700">
+                  Prefer remote work
+                </label>
+              </div>
+              <SelectField
+                label="Job Type Preference"
+                name="jobTypePreference"
+                value={form.jobTypePreference}
+                onChange={handleInputChange}
+                options={['Full-time', 'Part-time', 'Contract', 'Internship']}
+                disabled={!editMode}
+              />
             </div>
           )}
 
           {/* Education */}
           {activeTab === 'education' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputField 
-                label="College/University" 
-                name="college" 
-                value={form.college} 
-                onChange={handleInputChange} 
-                disabled={!editMode}
-                icon={<FaGraduationCap className="text-gray-400" />}
-              />
-              <InputField 
-                label="Degree" 
-                name="degree" 
-                value={form.degree} 
-                onChange={handleInputChange} 
-                disabled={!editMode}
-              />
-              <InputField 
-                label="Specialization" 
-                name="specialization" 
-                value={form.specialization || ''} 
-                onChange={handleInputChange} 
-                disabled={!editMode}
-              />
-              <InputField
-                label="Graduation Year"
-                name="graduationYear"
-                type="number"
-                min={1900}
-                max={new Date().getFullYear() + 10}
-                value={form.graduationYear}
-                onChange={handleInputChange}
-                disabled={!editMode}
-              />
-              <InputField
-                label="Academic % or GPA"
-                name="academicPercentage"
-                type="number"
-                min={0}
-                max={100}
-                step="0.1"
-                value={form.academicPercentage}
-                onChange={handleInputChange}
-                disabled={!editMode}
-              />
-              <InputField 
-                label="Backlogs (if any)" 
-                name="backlogs" 
-                type="number" 
-                min={0} 
-                value={form.backlogs} 
-                onChange={handleInputChange} 
-                disabled={!editMode}
-              />
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold flex items-center">
+                  <FaGraduationCap className="mr-2 text-indigo-600" />
+                  Education
+                </h2>
+                {editMode && (
+                  <button
+                    onClick={() => addItem('education', {
+                      institution: "",
+                      degree: "",
+                      specialization: "",
+                      startDate: "",
+                      endDate: "",
+                      graduationYear: "",
+                      academicPercentage: "",
+                      gpa: "",
+                      backlogs: 0,
+                    })}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  >
+                    <FaPlus /> Add Education
+                  </button>
+                )}
+              </div>
+
+              {(form.education || []).length === 0 ? (
+                <div className="bg-gray-50 p-8 text-center rounded-lg border border-gray-200">
+                  <FaGraduationCap className="mx-auto text-3xl text-gray-400 mb-3" />
+                  <h3 className="text-lg font-medium text-gray-700">No education added</h3>
+                  <p className="text-gray-500 mb-4">Add your educational background here</p>
+                  {editMode && (
+                    <button
+                      onClick={() => addItem('education', {
+                        institution: "",
+                        degree: "",
+                        specialization: "",
+                        startDate: "",
+                        endDate: "",
+                        graduationYear: "",
+                        academicPercentage: "",
+                        gpa: "",
+                        backlogs: 0,
+                      })}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    >
+                      Add First Education
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {(form.education || []).map((edu, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="border rounded-lg p-6 bg-white"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InputField
+                          label="Institution"
+                          name={`edu-institution-${i}`}
+                          value={edu.institution}
+                          onChange={(e) => updateField('education', e.target.value, i, 'institution')}
+                          disabled={!editMode}
+                          icon={<FaGraduationCap className="text-gray-400" />}
+                        />
+                        <InputField
+                          label="Degree"
+                          name={`edu-degree-${i}`}
+                          value={edu.degree}
+                          onChange={(e) => updateField('education', e.target.value, i, 'degree')}
+                          disabled={!editMode}
+                        />
+                        <InputField
+                          label="Specialization"
+                          name={`edu-specialization-${i}`}
+                          value={edu.specialization}
+                          onChange={(e) => updateField('education', e.target.value, i, 'specialization')}
+                          disabled={!editMode}
+                        />
+                        <InputField
+                          label="Start Date"
+                          name={`edu-startDate-${i}`}
+                          type="date"
+                          value={edu.startDate}
+                          onChange={(e) => updateField('education', e.target.value, i, 'startDate')}
+                          disabled={!editMode}
+                        />
+                        <InputField
+                          label="End Date"
+                          name={`edu-endDate-${i}`}
+                          type="date"
+                          value={edu.endDate}
+                          onChange={(e) => updateField('education', e.target.value, i, 'endDate')}
+                          disabled={!editMode}
+                        />
+                        <InputField
+                          label="Graduation Year"
+                          name={`edu-graduationYear-${i}`}
+                          type="number"
+                          min={1900}
+                          max={new Date().getFullYear() + 10}
+                          value={edu.graduationYear}
+                          onChange={(e) => updateField('education', e.target.value, i, 'graduationYear')}
+                          disabled={!editMode}
+                        />
+                        <InputField
+                          label="Academic % or GPA"
+                          name={`edu-academicPercentage-${i}`}
+                          type="number"
+                          min={0}
+                          max={100}
+                          step="0.1"
+                          value={edu.academicPercentage}
+                          onChange={(e) => updateField('education', e.target.value, i, 'academicPercentage')}
+                          disabled={!editMode}
+                        />
+                        <InputField
+                          label="GPA"
+                          name={`edu-gpa-${i}`}
+                          type="number"
+                          min={0}
+                          max={10}
+                          step="0.1"
+                          value={edu.gpa}
+                          onChange={(e) => updateField('education', e.target.value, i, 'gpa')}
+                          disabled={!editMode}
+                        />
+                        <InputField
+                          label="Backlogs"
+                          name={`edu-backlogs-${i}`}
+                          type="number"
+                          min={0}
+                          value={edu.backlogs}
+                          onChange={(e) => updateField('education', e.target.value, i, 'backlogs')}
+                          disabled={!editMode}
+                        />
+                      </div>
+                      {editMode && (
+                        <div className="mt-4 flex justify-end">
+                          <button
+                            onClick={() => removeItem('education', i)}
+                            className="text-red-600 hover:text-red-800 font-medium flex items-center"
+                          >
+                            <FaTimes className="mr-1" /> Remove Education
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -350,8 +735,9 @@ const handleResumeUpload = async (file) => {
                 {editMode && (
                   <div className="flex items-center gap-3 mb-4">
                     <input
-                      ref={skillInputRef}
                       type="text"
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
                       placeholder="Add skill (e.g., React, Python)"
                       className="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       onKeyDown={(e) => e.key === 'Enter' && handleSkillAdd()}
@@ -387,91 +773,240 @@ const handleResumeUpload = async (file) => {
             </div>
           )}
 
-          {/* Resume & Social Links */}
-{activeTab === 'resume' && (
-  <div className="space-y-8">
+          {/* Experience */}
+          {activeTab === 'experience' && (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold flex items-center">
+                  <FaBriefcase className="mr-2 text-indigo-600" />
+                  Work Experience
+                </h2>
+                {editMode && (
+                  <button
+                    onClick={() => addItem('experiences', {
+                      company: "",
+                      position: "",
+                      startDate: "",
+                      endDate: "",
+                      isCurrentJob: false,
+                      employmentType: "Full-time",
+                      description: "",
+                    })}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  >
+                    <FaPlus /> Add Experience
+                  </button>
+                )}
+              </div>
 
-    {/* Resume Section */}
-    <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-      <h2 className="text-xl font-semibold mb-4 flex items-center">
-        <FaFilePdf className="mr-2 text-indigo-600" />
-        Resume
-      </h2>
-
-      {form.resumeUrl ? (
-        <div className="flex flex-col gap-4">
-          <a
-            href={form.resumeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center text-indigo-600 hover:text-indigo-800"
-          >
-            <FaFilePdf className="mr-2 text-2xl" />
-            <span>View Current Resume</span>
-            <FaExternalLinkAlt className="ml-1 text-sm" />
-          </a>
-
-          {editMode && (
-            <ResumeUpload
-              currentUrl={form.resumeUrl}
-              onUpload={handleResumeUpload}
-              progress={uploadProgress}
-            />
-          )}
-
-          {/* Show extracted text if available */}
-          {form.resumeText && (
-            <div className="mt-2 p-3 bg-gray-100 rounded max-h-48 overflow-auto text-sm text-gray-700">
-              <strong>Extracted Resume Text:</strong>
-              <p>{form.resumeText}</p>
+              {(form.experiences || []).length === 0 ? (
+                <div className="bg-gray-50 p-8 text-center rounded-lg border border-gray-200">
+                  <FaBriefcase className="mx-auto text-3xl text-gray-400 mb-3" />
+                  <h3 className="text-lg font-medium text-gray-700">No experience added</h3>
+                  <p className="text-gray-500 mb-4">Add your work experience here</p>
+                  {editMode && (
+                    <button
+                      onClick={() => addItem('experiences', {
+                        company: "",
+                        position: "",
+                        startDate: "",
+                        endDate: "",
+                        isCurrentJob: false,
+                        employmentType: "Full-time",
+                        description: "",
+                      })}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    >
+                      Add First Experience
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {(form.experiences || []).map((exp, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="border rounded-lg p-6 bg-white"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InputField
+                          label="Company"
+                          name={`exp-company-${i}`}
+                          value={exp.company}
+                          onChange={(e) => updateField('experiences', e.target.value, i, 'company')}
+                          disabled={!editMode}
+                        />
+                        <InputField
+                          label="Position"
+                          name={`exp-position-${i}`}
+                          value={exp.position}
+                          onChange={(e) => updateField('experiences', e.target.value, i, 'position')}
+                          disabled={!editMode}
+                        />
+                        <InputField
+                          label="Start Date"
+                          name={`exp-startDate-${i}`}
+                          type="date"
+                          value={exp.startDate}
+                          onChange={(e) => updateField('experiences', e.target.value, i, 'startDate')}
+                          disabled={!editMode}
+                        />
+                        {!exp.isCurrentJob ? (
+                          <InputField
+                            label="End Date"
+                            name={`exp-endDate-${i}`}
+                            type="date"
+                            value={exp.endDate}
+                            onChange={(e) => updateField('experiences', e.target.value, i, 'endDate')}
+                            disabled={!editMode}
+                          />
+                        ) : (
+                          <div className="flex items-center">
+                            <span className="text-gray-700">Current Job</span>
+                          </div>
+                        )}
+                        <SelectField
+                          label="Employment Type"
+                          name={`exp-employmentType-${i}`}
+                          value={exp.employmentType}
+                          onChange={(e) => updateField('experiences', e.target.value, i, 'employmentType')}
+                          options={['Full-time', 'Part-time', 'Contract', 'Internship', 'Freelance']}
+                          disabled={!editMode}
+                        />
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`exp-current-${i}`}
+                            checked={exp.isCurrentJob || false}
+                            onChange={(e) => updateField('experiences', { ...exp, isCurrentJob: e.target.checked }, i)}
+                            disabled={!editMode}
+                            className="mr-2"
+                          />
+                          <label htmlFor={`exp-current-${i}`} className="text-gray-700">
+                            Current Job
+                          </label>
+                        </div>
+                        <div className="md:col-span-2">
+                          <InputField
+                            label="Description"
+                            name={`exp-description-${i}`}
+                            value={exp.description}
+                            onChange={(e) => updateField('experiences', e.target.value, i, 'description')}
+                            disabled={!editMode}
+                            textarea
+                          />
+                        </div>
+                      </div>
+                      {editMode && (
+                        <div className="mt-4 flex justify-end">
+                          <button
+                            onClick={() => removeItem('experiences', i)}
+                            className="text-red-600 hover:text-red-800 font-medium flex items-center"
+                          >
+                            <FaTimes className="mr-1" /> Remove Experience
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-        </div>
-      ) : (
-        <div>
-          {editMode ? (
-            <ResumeUpload
-              onUpload={handleResumeUpload}
-              progress={uploadProgress}
-            />
-          ) : (
-            <p className="text-gray-500">No resume uploaded</p>
+
+          {/* Resume & Social Links */}
+          {activeTab === 'resume' && (
+            <div className="space-y-8">
+              {/* Resume Section */}
+              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h2 className="text-xl font-semibold mb-4 flex items-center">
+                  <FaFilePdf className="mr-2 text-indigo-600" />
+                  Resume
+                </h2>
+
+                {form.resumeUrl ? (
+                  <div className="flex flex-col gap-4">
+                    <a
+                      href={form.resumeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center text-indigo-600 hover:text-indigo-800"
+                    >
+                      <FaFilePdf className="mr-2 text-2xl" />
+                      <span>View Current Resume</span>
+                      <FaExternalLinkAlt className="ml-1 text-sm" />
+                    </a>
+
+                    {editMode && (
+                      <ResumeUpload
+                        currentUrl={form.resumeUrl}
+                        onUpload={handleResumeUpload}
+                        progress={uploadProgress}
+                      />
+                    )}
+
+                    {form.resumeText && (
+                      <div className="mt-2 p-3 bg-gray-100 rounded max-h-48 overflow-auto text-sm text-gray-700">
+                        <strong>Extracted Resume Text:</strong>
+                        <p>{form.resumeText}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    {editMode ? (
+                      <ResumeUpload
+                        onUpload={handleResumeUpload}
+                        progress={uploadProgress}
+                      />
+                    ) : (
+                      <p className="text-gray-500">No resume uploaded</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Online Presence Section */}
+              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h2 className="text-xl font-semibold mb-4 flex items-center">
+                  <FaGlobe className="mr-2 text-indigo-600" />
+                  Online Presence
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <SocialInput
+                    icon={<FaGithub className="text-gray-700" />}
+                    label="GitHub Profile"
+                    name="githubUrl"
+                    value={form.githubUrl || ''}
+                    onChange={handleInputChange}
+                    disabled={!editMode}
+                    placeholder="https://github.com/yourusername"
+                  />
+                  <SocialInput
+                    icon={<FaLinkedin className="text-blue-700" />}
+                    label="LinkedIn Profile"
+                    name="linkedinUrl"
+                    value={form.linkedinUrl || ''}
+                    onChange={handleInputChange}
+                    disabled={!editMode}
+                    placeholder="https://linkedin.com/in/yourprofile"
+                  />
+                  <SocialInput
+                    icon={<FaGlobe className="text-green-600" />}
+                    label="Portfolio Website"
+                    name="portfolioUrl"
+                    value={form.portfolioUrl || ''}
+                    onChange={handleInputChange}
+                    disabled={!editMode}
+                    placeholder="https://yourportfolio.com"
+                  />
+                </div>
+              </div>
+            </div>
           )}
-        </div>
-      )}
-    </div>
-
-    {/* Online Presence Section */}
-    <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-      <h2 className="text-xl font-semibold mb-4 flex items-center">
-        <FaGlobe className="mr-2 text-indigo-600" />
-        Online Presence
-      </h2>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <SocialInput
-          icon={<FaGithub className="text-gray-700" />}
-          label="GitHub Profile"
-          name="githubUrl"
-          value={form.githubUrl || ''}
-          onChange={handleInputChange}
-          disabled={!editMode}
-          placeholder="https://github.com/yourusername"
-        />
-        <SocialInput
-          icon={<FaLinkedin className="text-blue-700" />}
-          label="LinkedIn Profile"
-          name="linkedinUrl"
-          value={form.linkedinUrl || ''}
-          onChange={handleInputChange}
-          disabled={!editMode}
-          placeholder="https://linkedin.com/in/yourprofile"
-        />
-      </div>
-    </div>
-  </div>
-)}
-
 
           {/* Address */}
           {activeTab === 'address' && (
@@ -484,7 +1019,7 @@ const handleResumeUpload = async (file) => {
                 disabled={!editMode}
                 icon={<FaMapMarkerAlt className="text-gray-400" />}
               />
-              <InputField
+                            <InputField
                 label="City"
                 name="city"
                 value={form.address?.city || ''}
@@ -492,7 +1027,7 @@ const handleResumeUpload = async (file) => {
                 disabled={!editMode}
               />
               <InputField
-                label="State/Province"
+                label="State"
                 name="state"
                 value={form.address?.state || ''}
                 onChange={(e) => updateField('address', { ...form.address, state: e.target.value })}
@@ -506,8 +1041,9 @@ const handleResumeUpload = async (file) => {
                 disabled={!editMode}
               />
               <InputField
-                label="Postal/Zip Code"
+                label="Pincode"
                 name="pincode"
+                type="number"
                 value={form.address?.pincode || ''}
                 onChange={(e) => updateField('address', { ...form.address, pincode: e.target.value })}
                 disabled={!editMode}
@@ -525,14 +1061,16 @@ const handleResumeUpload = async (file) => {
                 </h2>
                 {editMode && (
                   <button
-                    onClick={() => addItem('certifications', {
-                      name: '',
-                      issuer: '',
-                      issueDate: '',
-                      expiryDate: '',
-                      credentialId: '',
-                      credentialUrl: '',
-                    })}
+                    onClick={() =>
+                      addItem('certifications', {
+                        name: "",
+                        issuer: "",
+                        issueDate: "",
+                        expiryDate: "",
+                        credentialId: "",
+                        credentialUrl: "",
+                      })
+                    }
                     className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     <FaPlus /> Add Certification
@@ -540,115 +1078,65 @@ const handleResumeUpload = async (file) => {
                 )}
               </div>
 
-              {(form.certifications || []).length === 0 ? (
-                <div className="bg-gray-50 p-8 text-center rounded-lg border border-gray-200">
-                  <FaFileWord className="mx-auto text-3xl text-gray-400 mb-3" />
-                  <h3 className="text-lg font-medium text-gray-700">No certifications added</h3>
-                  <p className="text-gray-500 mb-4">Add your professional certifications here</p>
+              {(form.certifications || []).map((cert, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="border rounded-lg p-6 mb-4 bg-white"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InputField
+                      label="Name"
+                      value={cert.name}
+                      onChange={(e) => updateField('certifications', e.target.value, i, 'name')}
+                      disabled={!editMode}
+                    />
+                    <InputField
+                      label="Issuer"
+                      value={cert.issuer}
+                      onChange={(e) => updateField('certifications', e.target.value, i, 'issuer')}
+                      disabled={!editMode}
+                    />
+                    <InputField
+                      label="Issue Date"
+                      type="date"
+                      value={cert.issueDate}
+                      onChange={(e) => updateField('certifications', e.target.value, i, 'issueDate')}
+                      disabled={!editMode}
+                    />
+                    <InputField
+                      label="Expiry Date"
+                      type="date"
+                      value={cert.expiryDate}
+                      onChange={(e) => updateField('certifications', e.target.value, i, 'expiryDate')}
+                      disabled={!editMode}
+                    />
+                    <InputField
+                      label="Credential ID"
+                      value={cert.credentialId}
+                      onChange={(e) => updateField('certifications', e.target.value, i, 'credentialId')}
+                      disabled={!editMode}
+                    />
+                    <InputField
+                      label="Credential URL"
+                      value={cert.credentialUrl}
+                      onChange={(e) => updateField('certifications', e.target.value, i, 'credentialUrl')}
+                      disabled={!editMode}
+                    />
+                  </div>
                   {editMode && (
-                    <button
-                      onClick={() => addItem('certifications', {
-                        name: '',
-                        issuer: '',
-                        issueDate: '',
-                        expiryDate: '',
-                        credentialId: '',
-                        credentialUrl: '',
-                      })}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                    >
-                      Add First Certification
-                    </button>
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        onClick={() => removeItem('certifications', i)}
+                        className="text-red-600 hover:text-red-800 font-medium flex items-center"
+                      >
+                        <FaTimes className="mr-1" /> Remove Certification
+                      </button>
+                    </div>
                   )}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {(form.certifications || []).map((cert, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="border rounded-lg p-6 bg-white"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <InputField
-                          label="Certification Name"
-                          name={`cert-name-${i}`}
-                          value={cert.name}
-                          onChange={(e) => updateField('certifications', e.target.value, i, 'name')}
-                          disabled={!editMode}
-                        />
-                        <InputField
-                          label="Issuing Organization"
-                          name={`cert-issuer-${i}`}
-                          value={cert.issuer}
-                          onChange={(e) => updateField('certifications', e.target.value, i, 'issuer')}
-                          disabled={!editMode}
-                        />
-                        <InputField
-                          label="Issue Date"
-                          name={`cert-issueDate-${i}`}
-                          type="date"
-                          value={cert.issueDate ? cert.issueDate.split('T')[0] : ''}
-                          onChange={(e) => updateField('certifications', e.target.value, i, 'issueDate')}
-                          disabled={!editMode}
-                        />
-                        <InputField
-                          label="Expiry Date (if applicable)"
-                          name={`cert-expiryDate-${i}`}
-                          type="date"
-                          value={cert.expiryDate ? cert.expiryDate.split('T')[0] : ''}
-                          onChange={(e) => updateField('certifications', e.target.value, i, 'expiryDate')}
-                          disabled={!editMode}
-                        />
-                        <InputField
-                          label="Credential ID"
-                          name={`cert-credentialId-${i}`}
-                          value={cert.credentialId}
-                          onChange={(e) => updateField('certifications', e.target.value, i, 'credentialId')}
-                          disabled={!editMode}
-                        />
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Credential URL
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="url"
-                              name={`cert-credentialUrl-${i}`}
-                              value={cert.credentialUrl || ''}
-                              onChange={(e) => updateField('certifications', e.target.value, i, 'credentialUrl')}
-                              disabled={!editMode}
-                              className="flex-grow border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
-                              placeholder="https://example.com/certificate"
-                            />
-                            {cert.credentialUrl && (
-                              <a 
-                                href={cert.credentialUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-indigo-600 hover:text-indigo-800"
-                              >
-                                <FaExternalLinkAlt />
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      {editMode && (
-                        <div className="mt-4 flex justify-end">
-                          <button
-                            onClick={() => removeItem('certifications', i)}
-                            className="text-red-600 hover:text-red-800 font-medium flex items-center"
-                          >
-                            <FaTimes className="mr-1" /> Remove Certification
-                          </button>
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              )}
+                </motion.div>
+              ))}
             </div>
           )}
 
@@ -662,15 +1150,17 @@ const handleResumeUpload = async (file) => {
                 </h2>
                 {editMode && (
                   <button
-                    onClick={() => addItem('projects', {
-                      title: '',
-                      description: '',
-                      techStack: [],
-                      projectUrl: '',
-                      startDate: '',
-                      endDate: '',
-                      isCurrent: false,
-                    })}
+                    onClick={() =>
+                      addItem('projects', {
+                        title: "",
+                        description: "",
+                        techStack: [],
+                        projectUrl: "",
+                        githubRepo: "",
+                        startDate: "",
+                        endDate: "",
+                      })
+                    }
                     className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                   >
                     <FaPlus /> Add Project
@@ -678,140 +1168,107 @@ const handleResumeUpload = async (file) => {
                 )}
               </div>
 
-              {(form.projects || []).length === 0 ? (
-                <div className="bg-gray-50 p-8 text-center rounded-lg border border-gray-200">
-                  <FaGlobe className="mx-auto text-3xl text-gray-400 mb-3" />
-                  <h3 className="text-lg font-medium text-gray-700">No projects added</h3>
-                  <p className="text-gray-500 mb-4">Showcase your work by adding projects here</p>
-                  {editMode && (
-                    <button
-                      onClick={() => addItem('projects', {
-                        title: '',
-                        description: '',
-                        techStack: [],
-                        projectUrl: '',
-                        startDate: '',
-                        endDate: '',
-                        isCurrent: false,
-                      })}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                    >
-                      Add First Project
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {(form.projects || []).map((proj, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="border rounded-lg p-6 bg-white"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <InputField
-                          label="Project Title"
-                          name={`proj-title-${i}`}
-                          value={proj.title}
-                          onChange={(e) => updateField('projects', e.target.value, i, 'title')}
-                          disabled={!editMode}
-                        />
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Project URL
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="url"
-                              name={`proj-projectUrl-${i}`}
-                              value={proj.projectUrl || ''}
-                              onChange={(e) => updateField('projects', e.target.value, i, 'projectUrl')}
-                              disabled={!editMode}
-                              className="flex-grow border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
-                              placeholder="https://example.com/project"
-                            />
-                            {proj.projectUrl && (
-                              <a 
-                                href={proj.projectUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-indigo-600 hover:text-indigo-800"
+              {(form.projects || []).map((proj, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="border rounded-lg p-6 mb-4 bg-white"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InputField
+                      label="Title"
+                      value={proj.title}
+                      onChange={(e) => updateField('projects', e.target.value, i, 'title')}
+                      disabled={!editMode}
+                    />
+                    <InputField
+                      label="Project URL"
+                      value={proj.projectUrl}
+                      onChange={(e) => updateField('projects', e.target.value, i, 'projectUrl')}
+                      disabled={!editMode}
+                    />
+                    <InputField
+                      label="GitHub Repo"
+                      value={proj.githubRepo}
+                      onChange={(e) => updateField('projects', e.target.value, i, 'githubRepo')}
+                      disabled={!editMode}
+                    />
+                    <InputField
+                      label="Start Date"
+                      type="date"
+                      value={proj.startDate}
+                      onChange={(e) => updateField('projects', e.target.value, i, 'startDate')}
+                      disabled={!editMode}
+                    />
+                    <InputField
+                      label="End Date"
+                      type="date"
+                      value={proj.endDate}
+                      onChange={(e) => updateField('projects', e.target.value, i, 'endDate')}
+                      disabled={!editMode}
+                    />
+                    <div className="md:col-span-2">
+                      <InputField
+                        label="Description"
+                        textarea
+                        value={proj.description}
+                        onChange={(e) => updateField('projects', e.target.value, i, 'description')}
+                        disabled={!editMode}
+                      />
+                    </div>
+
+                    {/* Tech Stack */}
+                    <div className="md:col-span-2">
+                      <label className="block text-gray-700 font-medium mb-2">
+                        Tech Stack
+                      </label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {proj.techStack.map((tech, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-gray-100 px-3 py-1 rounded-full flex items-center gap-2"
+                          >
+                            {tech}
+                            {editMode && (
+                              <button
+                                onClick={() => removeTechStackItem(i, idx)}
+                                className="text-red-500"
                               >
-                                <FaExternalLinkAlt />
-                              </a>
+                                <FaTimes size={12} />
+                              </button>
                             )}
-                          </div>
-                        </div>
-                        <div className="md:col-span-2">
-                          <InputField
-                            label="Description"
-                            name={`proj-description-${i}`}
-                            value={proj.description}
-                            onChange={(e) => updateField('projects', e.target.value, i, 'description')}
-                            disabled={!editMode}
-                            textarea
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <TagInput
-                            label="Technologies Used"
-                            tags={proj.techStack || []}
-                            onChange={(tags) => updateField('projects', { ...proj, techStack: tags }, i)}
-                            disabled={!editMode}
-                          />
-                        </div>
-                        <InputField
-                          label="Start Date"
-                          name={`proj-startDate-${i}`}
-                          type="date"
-                          value={proj.startDate ? proj.startDate.split('T')[0] : ''}
-                          onChange={(e) => updateField('projects', e.target.value, i, 'startDate')}
-                          disabled={!editMode}
-                        />
-                        {!proj.isCurrent ? (
-                          <InputField
-                            label="End Date"
-                            name={`proj-endDate-${i}`}
-                            type="date"
-                            value={proj.endDate ? proj.endDate.split('T')[0] : ''}
-                            onChange={(e) => updateField('projects', e.target.value, i, 'endDate')}
-                            disabled={!editMode}
-                          />
-                        ) : (
-                          <div className="flex items-center">
-                            <span className="text-gray-700">Ongoing Project</span>
-                          </div>
-                        )}
-                        {editMode && (
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              id={`proj-current-${i}`}
-                              checked={proj.isCurrent || false}
-                              onChange={(e) => updateField('projects', { ...proj, isCurrent: e.target.checked }, i)}
-                              className="mr-2"
-                            />
-                            <label htmlFor={`proj-current-${i}`} className="text-gray-700">
-                              Currently working on this project
-                            </label>
-                          </div>
-                        )}
+                          </span>
+                        ))}
                       </div>
                       {editMode && (
-                        <div className="mt-4 flex justify-end">
-                          <button
-                            onClick={() => removeItem('projects', i)}
-                            className="text-red-600 hover:text-red-800 font-medium flex items-center"
-                          >
-                            <FaTimes className="mr-1" /> Remove Project
-                          </button>
-                        </div>
+                        <input
+                          type="text"
+                          placeholder="Add technology"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addTechStackItem(i, e.target.value);
+                              e.target.value = "";
+                            }
+                          }}
+                          className="border border-gray-300 rounded-lg px-3 py-2"
+                        />
                       )}
-                    </motion.div>
-                  ))}
-                </div>
-              )}
+                    </div>
+                  </div>
+                  {editMode && (
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        onClick={() => removeItem('projects', i)}
+                        className="text-red-600 hover:text-red-800 font-medium flex items-center"
+                      >
+                        <FaTimes className="mr-1" /> Remove Project
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
             </div>
           )}
         </div>
@@ -820,37 +1277,22 @@ const handleResumeUpload = async (file) => {
   );
 }
 
-// InputField component
-function InputField({ label, name, value, onChange, disabled = false, type = 'text', min, max, step, textarea = false, icon }) {
+/* --------------------- Reusable Components ------------------- */
+function InputField({ label, icon, textarea, ...props }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <div className="relative">
-        {icon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            {icon}
-          </div>
-        )}
+      <label className="block text-gray-700 font-medium mb-2">{label}</label>
+      <div className="flex items-center border border-gray-300 rounded-lg px-3 py-2">
+        {icon && <span className="mr-2">{icon}</span>}
         {textarea ? (
           <textarea
-            name={name}
-            value={value || ''}
-            onChange={onChange}
-            disabled={disabled}
-            rows={4}
-            className={`block w-full rounded-lg border border-gray-300 ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100`}
+            {...props}
+            className="w-full border-none focus:ring-0 focus:outline-none resize-y"
           />
         ) : (
           <input
-            type={type}
-            name={name}
-            value={value || ''}
-            onChange={onChange}
-            disabled={disabled}
-            min={min}
-            max={max}
-            step={step}
-            className={`block w-full rounded-lg border border-gray-300 ${icon ? 'pl-10' : 'pl-3'} pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100`}
+            {...props}
+            className="w-full border-none focus:ring-0 focus:outline-none"
           />
         )}
       </div>
@@ -858,167 +1300,54 @@ function InputField({ label, name, value, onChange, disabled = false, type = 'te
   );
 }
 
-// SelectField component
-function SelectField({ label, name, value, onChange, options = [], disabled = false }) {
+function SelectField({ label, options, ...props }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-gray-700 font-medium mb-2">{label}</label>
       <select
-        name={name}
-        value={value || ''}
-        onChange={onChange}
-        disabled={disabled}
-        className="block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+        {...props}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2"
       >
-        <option value="">Select an option</option>
-        {options.map(opt => (
-          <option key={opt} value={opt}>{opt}</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
         ))}
       </select>
     </div>
   );
 }
 
-// SocialInput component
-function SocialInput({ icon, label, name, value, onChange, disabled, placeholder }) {
+function SocialInput({ icon, label, ...props }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <div className="flex rounded-lg shadow-sm">
-        <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
-          {icon}
-        </span>
+      <label className="block text-gray-700 font-medium mb-2">{label}</label>
+      <div className="flex items-center border border-gray-300 rounded-lg px-3 py-2">
+        {icon && <span className="mr-2">{icon}</span>}
         <input
-          type="url"
-          name={name}
-          value={value || ''}
-          onChange={onChange}
-          disabled={disabled}
-          placeholder={placeholder}
-          className="flex-grow min-w-0 block w-full px-3 py-2 rounded-none rounded-r-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+          {...props}
+          className="w-full border-none focus:ring-0 focus:outline-none"
         />
       </div>
     </div>
   );
 }
 
-// ResumeUpload component
-function ResumeUpload({ currentUrl, onUpload, progress }) {
-  const fileInputRef = useRef();
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Validate file type
-    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!validTypes.includes(file.type)) {
-      alert('Please upload a PDF or Word document');
-      return;
-    }
-    
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size should be less than 5MB');
-      return;
-    }
-    
-    onUpload(file);
-  };
-
+function ResumeUpload({ onUpload, progress }) {
   return (
     <div>
       <input
         type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        className="hidden"
         accept=".pdf,.doc,.docx"
+        onChange={(e) => onUpload(e.target.files[0])}
+        className="mb-2"
       />
-      <button
-        type="button"
-        onClick={() => fileInputRef.current.click()}
-        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
-      >
-        <FaFilePdf /> Upload New Resume
-      </button>
-      
-      {progress > 0 && progress < 100 && (
-        <div className="mt-2">
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div 
-              className="bg-indigo-600 h-2.5 rounded-full" 
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-          <p className="text-xs text-gray-500 mt-1">Uploading: {progress}%</p>
-        </div>
-      )}
-      
-      <p className="text-xs text-gray-500 mt-2">PDF or Word document, max 5MB</p>
-    </div>
-  );
-}
-
-// TagInput component
-function TagInput({ label, tags, onChange, disabled }) {
-  const [inputValue, setInputValue] = useState('');
-
-  const handleAdd = () => {
-    const val = inputValue.trim();
-    if (!val || tags.includes(val)) return;
-    onChange([...tags, val]);
-    setInputValue('');
-  };
-
-  const handleRemove = (tag) => {
-    onChange(tags.filter(t => t !== tag));
-  };
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <div className="flex flex-wrap gap-2 mb-2">
-        {tags.map(tag => (
-          <span
-            key={tag}
-            className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full flex items-center gap-1"
-          >
-            <span>{tag}</span>
-            {!disabled && (
-              <button
-                type="button"
-                onClick={() => handleRemove(tag)}
-                className="text-gray-500 hover:text-red-600"
-              >
-                <FaTimes size={12} />
-              </button>
-            )}
-          </span>
-        ))}
-      </div>
-      {!disabled && (
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleAdd();
-              }
-            }}
-            className="flex-grow border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Add technology (e.g., React)"
-          />
-          <button
-            type="button"
-            onClick={handleAdd}
-            className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-          >
-            <FaPlus size={16} />
-          </button>
+      {progress > 0 && (
+        <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div
+            className="bg-indigo-600 h-2.5 rounded-full"
+            style={{ width: `${progress}%` }}
+          ></div>
         </div>
       )}
     </div>

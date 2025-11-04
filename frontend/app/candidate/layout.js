@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 import AdvancedNotificationDropdown from "@/components/notification/notificationCard";
 // import useCurrentUser from "@/utils/useCurrentUser";
 import AuthGuard from "@/components/authGuard/authGuard";
@@ -76,14 +77,9 @@ const itemVariants = {
 function CandidateLayout({ children }) {
   // const { user, loading: userLoading } = useCurrentUser();
   const userLoading = false;
-const user = {
-  _id: "689cb17259b396a21587e4b3",
-  role: "candidate",
-  name: "username",
-  email: "username@gmail.com",
-  companyProfile: "689cb47c224a0c87b6344118",
-  isActive: true
-};
+  const { user } = useAuth();
+
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { logout } = useAuth();
 

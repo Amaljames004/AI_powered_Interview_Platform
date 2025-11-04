@@ -26,10 +26,10 @@ const userSchema = new mongoose.Schema(
     candidateProfile: { type: mongoose.Schema.Types.ObjectId, ref: "Candidate" },
 
     // Security & verification
-    resetPasswordToken: String,
-    resetPasswordExpires: Date,
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpires: { type: Date, select: false },
     emailVerified: { type: Boolean, default: false },
-    emailVerificationToken: String,
+    emailVerificationToken: { type: String, select: false },
   },
   { timestamps: true }
 );

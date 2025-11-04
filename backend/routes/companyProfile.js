@@ -55,4 +55,30 @@ router.get("/", authMiddleware(["recruiter"]), async (req, res) => {
   }
 });
 
+
+router.get("/check-profile", authMiddleware(["recruiter"]), async (req, res) => {
+  try {
+    const company = await CompanyProfile.findOne({ recruiter: req.user.userId });
+    if (!company) {
+      return res.json({
+        complete: false,
+        missing: ["name", "website", "location", "industry"],
+      });
+    }
+
+    const missing = [];
+    if (!company.name) missing.push("name");
+    if (!company.website) missing.push("website");
+    if (!company.location) missing.push("location");
+    if (!company.industry) missing.push("industry");
+
+    res.json({
+      complete: missing.length === 0,
+      missing,
+    });
+  } catch (err) {
+    console.error("Error checking company profile completeness", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 module.exports = router;

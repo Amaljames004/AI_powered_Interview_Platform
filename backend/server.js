@@ -41,7 +41,7 @@ app.use(express.json());
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/company-profile", require("./routes/companyProfile"));
 app.use("/api/jobgroups", require("./routes/jobGroup"));
-
+app.use("/api/recruitment", require("./routes/recruitment"));
 // Candidate routes
 app.use("/api/candidate", require("./routes/candidate"));
 app.use("/api/candidatePool", require("./routes/candidatePool"));

@@ -27,7 +27,7 @@ export default function MyApplications() {
     try {
       setLoadingData(true);
       setError(null);
-      const { data } = await api.get('/jobgroups/my');
+      const { data } = await api.get('/recruitment/my');
       setJobGroups(data);
     } catch (err) {
       console.error('Failed to fetch job groups', err);
@@ -153,12 +153,13 @@ export default function MyApplications() {
                             <span>Deadline: {formatDate(group.deadline)}</span>
                           </div>
                           <div className="flex items-center text-sm text-gray-500">
-                            <FiUsers className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                            <span>
-                              {group.applications?.length || 0} application
-                              {group.applications?.length !== 1 ? 's' : ''}
-                            </span>
-                          </div>
+  <FiUsers className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
+  <span>
+    {group.applicationsCount || 0} application
+    {group.applicationsCount !== 1 ? 's' : ''}
+  </span>
+</div>
+
                         </div>
                       </div>
                       <div className="ml-5 flex-shrink-0">

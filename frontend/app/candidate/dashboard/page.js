@@ -29,6 +29,7 @@ export default function CandidateDashboard() {
   const [error, setError] = useState("");
 
   const [upcomingInterviews, setUpcomingInterviews] = useState([]);
+  const [interviewError, setInterviewError] = useState("");
   const [enrolledRecruitments, setEnrolledRecruitments] = useState([]);
   const [skills, setSkills] = useState([]);
 
@@ -36,41 +37,65 @@ export default function CandidateDashboard() {
     router.push(`/candidate/dashboard/job-group/${id}`);
   };
 
-  // Fetch dashboard data
+  // Fetch applications + skills
   useEffect(() => {
     if (!authLoading && user) {
-      const fetchDashboard = async () => {
+      const fetchDashboardData = async () => {
         try {
           setLoading(true);
           setError("");
 
-          const [interviewsRes, applicationsRes, skillsRes] = await Promise.all([
-            api.get("/interviews/upcoming"),
+          const [applicationsRes, skillsRes] = await Promise.all([
             api.get("/applications/my-applications"),
             api.get("/candidate/skills"),
           ]);
 
-          setUpcomingInterviews(interviewsRes.data || []);
+          console.log("Dashboard Applications:", applicationsRes.data);
+          console.log("Dashboard Skills:", skillsRes.data.skills);
+
           setEnrolledRecruitments(applicationsRes.data || []);
           setSkills(skillsRes.data.skills || []);
         } catch (err) {
-          console.error(err);
+          console.error("Dashboard fetch error:", err);
           setError("Failed to load dashboard data");
         } finally {
           setLoading(false);
         }
       };
 
-      fetchDashboard();
+      fetchDashboardData();
     }
   }, [authLoading, user]);
+
+  // Fetch upcoming interviews separately
+  useEffect(() => {
+    console.log("Interviews useEffect running", { authLoading, user });
+
+    if (!authLoading && user) {
+      const fetchInterviews = async () => {
+        try {
+          console.log("Fetching upcoming interviews...");
+          const res = await api.get("/interviews/upcoming");
+          console.log("API response object:", res);
+          console.log("Upcoming Interviews Response:", res.data);
+          setUpcomingInterviews(res.data || []);
+        } catch (err) {
+          console.error("Interview fetch error:", err);
+          setInterviewError("Failed to fetch upcoming interviews");
+          setUpcomingInterviews([]);
+        }
+      };
+
+      fetchInterviews();
+    }
+  }, [authLoading, user]);
+
 
   const handleJoinRequest = async () => {
     if (!joinCode.trim()) return;
 
     try {
       await api.post(`/applications/apply/${joinCode.trim()}`);
-
       const updatedEnrollments = await api.get("/applications/my-applications");
       setEnrolledRecruitments(updatedEnrollments.data || []);
     } catch (err) {
@@ -117,11 +142,13 @@ export default function CandidateDashboard() {
                 {upcomingInterviews.map((interview) => (
                   <motion.div
                     key={interview._id}
+                    onClick={() => router.push(`/candidate/interview/${interview._id}`)}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     whileHover={{ y: -2 }}
-                    className="bg-white rounded-lg p-5 border border-gray-200 hover:border-gray-300"
+                    className="bg-white rounded-lg p-5 border border-gray-200 hover:border-gray-300 cursor-pointer"
                   >
+
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
@@ -210,119 +237,117 @@ export default function CandidateDashboard() {
               </motion.button>
             </div>
 
-{enrolledRecruitments.length > 0 ? (
-  <div className="space-y-4">
-    {enrolledRecruitments.map((rec) => {
-      const job = rec.jobGroup;
-      const company = job?.company;
+            {enrolledRecruitments.length > 0 ? (
+              <div className="space-y-4">
+                {enrolledRecruitments.map((rec) => {
+                  const job = rec.jobGroup;
+                  const company = job?.company;
 
-      return (
-        <motion.div
-          key={rec._id}
-          onClick={() => handleRecruitmentClick(job?._id)}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          whileHover={{ y: -2 }}
-          className={`p-5 rounded-xl border cursor-pointer transition-all ${
-            rec.status === "enrolled"
-              ? "border-blue-200 bg-blue-50 hover:shadow-md"
-              : rec.status === "shortlisted"
-              ? "border-green-200 bg-green-50 hover:shadow-md"
-              : rec.status === "rejected"
-              ? "border-red-200 bg-red-50 hover:shadow-md"
-              : "border-gray-200 bg-white hover:shadow-md"
-          }`}
-        >
-          <div className="flex items-start gap-4">
-            {/* Company Logo */}
-            {company?.logo ? (
-              <img
-                src={company.logo}
-                alt={company.name}
-                className="w-12 h-12 rounded-lg object-cover border border-gray-200"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 font-bold">
-                {company?.name?.charAt(0) || "?"}
-              </div>
-            )}
+                  return (
+                    <motion.div
+                      key={rec._id}
+                      onClick={() => handleRecruitmentClick(job?._id)}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ y: -2 }}
+                      className={`p-5 rounded-xl border cursor-pointer transition-all ${rec.status === "enrolled"
+                          ? "border-blue-200 bg-blue-50 hover:shadow-md"
+                          : rec.status === "shortlisted"
+                            ? "border-green-200 bg-green-50 hover:shadow-md"
+                            : rec.status === "rejected"
+                              ? "border-red-200 bg-red-50 hover:shadow-md"
+                              : "border-gray-200 bg-white hover:shadow-md"
+                        }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        {/* Company Logo */}
+                        {company?.logo ? (
+                          <img
+                            src={company.logo}
+                            alt={company.name}
+                            className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 font-bold">
+                            {company?.name?.charAt(0) || "?"}
+                          </div>
+                        )}
 
-            {/* Job Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 truncate">
-                    {job?.title || "Untitled Position"}
-                  </h3>
-                  <p className="text-gray-700 text-sm">{company?.name || "Unknown Company"}</p>
-                  {company?.industry && (
-                    <p className="text-xs text-gray-500">{company.industry}</p>
-                  )}
-                </div>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    rec.status === "enrolled"
-                      ? "bg-blue-100 text-blue-800"
-                      : rec.status === "pending"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : rec.status === "shortlisted"
-                      ? "bg-green-100 text-green-800"
-                      : rec.status === "rejected"
-                      ? "bg-red-100 text-red-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
-                >
-                  {rec.status?.charAt(0).toUpperCase() + rec.status?.slice(1)}
-                </span>
-              </div>
+                        {/* Job Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900 truncate">
+                                {job?.title || "Untitled Position"}
+                              </h3>
+                              <p className="text-gray-700 text-sm">{company?.name || "Unknown Company"}</p>
+                              {company?.industry && (
+                                <p className="text-xs text-gray-500">{company.industry}</p>
+                              )}
+                            </div>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${rec.status === "enrolled"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : rec.status === "pending"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : rec.status === "shortlisted"
+                                      ? "bg-green-100 text-green-800"
+                                      : rec.status === "rejected"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-gray-100 text-gray-800"
+                                }`}
+                            >
+                              {rec.status?.charAt(0).toUpperCase() + rec.status?.slice(1)}
+                            </span>
+                          </div>
 
-              {/* Meta Info */}
-              <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-gray-600">
-                {job?.timeline?.applicationDeadline && (
-                  <div className="flex items-center">
-                    <FiClock className="mr-2 text-gray-400" />
-                    <span>
-                      Deadline {new Date(job.timeline.applicationDeadline).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-                {job?.employmentType && (
-                  <div className="flex items-center">
-                    <FiBriefcase className="mr-2 text-gray-400" />
-                    <span>{job.employmentType}</span>
-                  </div>
-                )}
-                {job?.workMode && (
-                  <div className="flex items-center">
-                    <FiMonitor className="mr-2 text-gray-400" />
-                    <span className="capitalize">{job.workMode}</span>
-                  </div>
-                )}
-                {job?.seniority && (
-                  <div className="flex items-center">
-                    <FiUser className="mr-2 text-gray-400" />
-                    <span className="capitalize">{job.seniority}</span>
-                  </div>
-                )}
-                {job?.priority && (
-                  <div className="flex items-center">
-                    <FiTrendingUp className="mr-2 text-gray-400" />
-                    <span className="capitalize">{job.priority}</span>
-                  </div>
-                )}
-                {company?.location && (
-                  <div className="flex items-center">
-                    <FiMapPin className="mr-2 text-gray-400" />
-                    <span>{company.location}</span>
-                  </div>
-                )}
+                          {/* Meta Info */}
+                          <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-gray-600">
+                            {job?.timeline?.applicationDeadline && (
+                              <div className="flex items-center">
+                                <FiClock className="mr-2 text-gray-400" />
+                                <span>
+                                  Deadline {new Date(job.timeline.applicationDeadline).toLocaleDateString()}
+                                </span>
+                              </div>
+                            )}
+                            {job?.employmentType && (
+                              <div className="flex items-center">
+                                <FiBriefcase className="mr-2 text-gray-400" />
+                                <span>{job.employmentType}</span>
+                              </div>
+                            )}
+                            {job?.workMode && (
+                              <div className="flex items-center">
+                                <FiMonitor className="mr-2 text-gray-400" />
+                                <span className="capitalize">{job.workMode}</span>
+                              </div>
+                            )}
+                            {job?.seniority && (
+                              <div className="flex items-center">
+                                <FiUser className="mr-2 text-gray-400" />
+                                <span className="capitalize">{job.seniority}</span>
+                              </div>
+                            )}
+                            {job?.priority && (
+                              <div className="flex items-center">
+                                <FiTrendingUp className="mr-2 text-gray-400" />
+                                <span className="capitalize">{job.priority}</span>
+                              </div>
+                            )}
+                            {company?.location && (
+                              <div className="flex items-center">
+                                <FiMapPin className="mr-2 text-gray-400" />
+                                <span>{company.location}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
-            </div>
-          </div>
-        </motion.div>
-      );
-    })}
-  </div>
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}

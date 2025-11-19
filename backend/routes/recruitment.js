@@ -37,25 +37,30 @@ router.get("/my", authMiddleware(["recruiter"]), async (req, res) => {
 
     const groups = await JobGroup.find({ company: company._id })
       .sort({ createdAt: -1 })
-      .populate({ path: "applications", select: "_id" })
       .lean();
 
-    // format to match frontend needs
-    const response = groups.map(g => ({
-      _id: g._id,
-      title: g.title,
-      description: g.description,
-      joinCode: g.joinCode,
-      deadline: g.timeline?.applicationDeadline,
-      applications: g.applications || [],
-    }));
+    // Add application counts
+    const withCounts = await Promise.all(
+      groups.map(async (g) => {
+        const applicationsCount = await Application.countDocuments({ jobGroup: g._id });
+        return {
+          _id: g._id,
+          title: g.title,
+          description: g.description,
+          joinCode: g.joinCode,
+          deadline: g.timeline?.applicationDeadline,
+          applicationsCount, // new field
+        };
+      })
+    );
 
-    res.json(response);
+    res.json(withCounts);
   } catch (err) {
     console.error("Error fetching recruiter job groups:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 // ---- Create Job Group ----
 router.post("/", authMiddleware(["recruiter"]), async (req, res) => {

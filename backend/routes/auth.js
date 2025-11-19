@@ -6,7 +6,6 @@ const User = require("../models/User");
 const Candidate = require("../models/Candidate");
 const CompanyProfile = require("../models/CompanyProfile");
 
-
 const router = express.Router();
 
 function normalizeRole(raw) {
@@ -15,7 +14,7 @@ function normalizeRole(raw) {
   if (["candidate", "student", "user"].includes(r)) return "candidate";
   if (["company", "recruiter", "employer"].includes(r)) return "recruiter";
   if (["admin", "administrator"].includes(r)) return "admin";
-  return "candidate"; // fallback
+  return "candidate";
 }
 
 /**
@@ -23,92 +22,52 @@ function normalizeRole(raw) {
  */
 router.post("/register", async (req, res) => {
   try {
-    const {
-      firstName,
-      middleName,
-      lastName,
-      companyName,
-      email,
-      password,
-      role: rawRole,
-    } = req.body;
+    const { firstName, middleName, lastName, companyName, email, password, role: rawRole } = req.body;
 
     const role = normalizeRole(rawRole);
+    if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
-
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
-    }
+    if (existingUser) return res.status(400).json({ message: "User already exists" });
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     let name = "";
     if (role === "candidate") {
-      if (!firstName || !lastName) {
-        return res
-          .status(400)
-          .json({ message: "First and last name are required for candidates" });
-      }
+      if (!firstName || !lastName)
+        return res.status(400).json({ message: "First and last name are required for candidates" });
       name = [firstName, middleName, lastName].filter(Boolean).join(" ");
     }
 
     if (role === "recruiter") {
-      if (!companyName) {
-        return res
-          .status(400)
-          .json({ message: "Company name is required for recruiters" });
-      }
+      if (!companyName)
+        return res.status(400).json({ message: "Company name is required for recruiters" });
       name = companyName;
     }
 
-    // Create user
-    const user = new User({
-      name,
-      email,
-      password: hashedPassword,
-      role,
-    });
+    const user = new User({ name, email, password: hashedPassword, role });
     await user.save();
 
     let candidateProfile = null;
     let companyProfile = null;
 
-    // If candidate → create candidate profile
     if (role === "candidate") {
-      candidateProfile = new Candidate({
-        user: user._id,
-        firstName,
-        middleName,
-        lastName,
-        email,
-      });
+      candidateProfile = new Candidate({ user: user._id, firstName, middleName, lastName, email });
       await candidateProfile.save();
-
       user.candidateProfile = candidateProfile._id;
       await user.save();
     }
 
-    // If recruiter → create company profile
     if (role === "recruiter") {
-      companyProfile = new CompanyProfile({
-        recruiter: user._id,
-        name: companyName,
-      });
+      companyProfile = new CompanyProfile({ recruiter: user._id, name: companyName });
       await companyProfile.save();
-
       user.companyProfile = companyProfile._id;
       await user.save();
     }
 
-    // Generate JWT
+    // ✅ Include email in JWT for your invite route
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { userId: user._id, role: user.role, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
@@ -131,7 +90,6 @@ router.post("/register", async (req, res) => {
   }
 });
 
-
 /**
  * POST /api/auth/login
  */
@@ -140,25 +98,20 @@ router.post("/login", async (req, res) => {
     const email = req.body.email?.trim().toLowerCase();
     const password = req.body.password;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
+    if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
 
     const user = await User.findOne({ email }).select("+password")
       .populate("candidateProfile")
       .populate("companyProfile");
 
-    if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
+    // ✅ Include email in JWT
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id, role: user.role, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );

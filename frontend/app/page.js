@@ -158,7 +158,7 @@ export default function LandingPage() {
       </section>
 
       {/* Problem Section */}
-      <section className="py-20 px-6 md:px-12" id="problem">
+      {/* <section className="py-20 px-6 md:px-12" id="problem">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <motion.h2 
@@ -227,10 +227,10 @@ export default function LandingPage() {
             </motion.div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Solution Section */}
-      <section className="py-20 bg-[#fde3c4] border-2 px-6 md:px-12" id="solution">
+      {/* <section className="py-20 bg-[#fde3c4] border-2 px-6 md:px-12" id="solution">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row gap-16 items-center">
             <div className="md:w-1/2">
@@ -301,10 +301,10 @@ export default function LandingPage() {
             </motion.div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* How It Works Section */}
-      <section className="py-20 px-6 md:px-12" id="how-it-works">
+      {/* <section className="py-20 px-6 md:px-12" id="how-it-works">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <motion.h2 
@@ -440,7 +440,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Features Section */}
       <section className="py-20 bg-[#fee1fe] border-2 px-6 md:px-12" id="features">
@@ -701,7 +701,7 @@ export default function LandingPage() {
       </section>
 
       {/* Technology Stack Section */}
-      <section className="py-20 px-6 md:px-12">
+      {/* <section className="py-20 px-6 md:px-12">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <motion.h2 
@@ -843,7 +843,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
    
 

@@ -144,8 +144,8 @@ function CandidateLayout({ children }) {
                   </motion.div>
 
                   <motion.div variants={itemVariants}>
-                    <SidebarLink href="/candidate/ai-interviews" icon={<Video size={DEFAULT_ICON_SIZE} strokeWidth={DEFAULT_ICON_STROKE_WIDTH} />}>
-                      AI Interviews
+                    <SidebarLink href="/candidate/interview-history" icon={<Video size={DEFAULT_ICON_SIZE} strokeWidth={DEFAULT_ICON_STROKE_WIDTH} />}>
+                      Interview History
                     </SidebarLink>
                   </motion.div>
 
@@ -240,8 +240,8 @@ function CandidateLayout({ children }) {
               My Applications
             </SidebarLink>
 
-            <SidebarLink href="/candidate/ai-interviews" icon={<Video size={DEFAULT_ICON_SIZE} strokeWidth={DEFAULT_ICON_STROKE_WIDTH} />}>
-              AI Interviews
+            <SidebarLink href="/candidate/interview-history" icon={<Video size={DEFAULT_ICON_SIZE} strokeWidth={DEFAULT_ICON_STROKE_WIDTH} />}>
+              Interview History
             </SidebarLink>
 
             <SidebarLink href="/candidate/mini-projects" icon={<ClipboardList size={DEFAULT_ICON_SIZE} strokeWidth={DEFAULT_ICON_STROKE_WIDTH} />}>
@@ -308,6 +308,8 @@ function CandidateLayout({ children }) {
               )}
             </div>
             {/* <AdvancedNotificationDropdown/> */}
+
+            <AdvancedNotificationDropdown/>
           </header>
 
           <main className="flex-1 overflow-y-auto bg-gray-50 p-6 custom-scrollbar">

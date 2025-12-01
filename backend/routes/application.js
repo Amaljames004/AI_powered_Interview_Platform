@@ -3,9 +3,9 @@ const mongoose = require("mongoose");
 const Application = require("../models/Application");
 const JobGroup = require("../models/JobGroup");
 const CompanyProfile = require("../models/CompanyProfile");
-
+const Invite = require("../models/invite"); 
 const { authMiddleware } = require("../middleware/auth");
-
+const Notification = require("../models/Notification");   
 const router = express.Router();
 
 /**
@@ -166,6 +166,17 @@ router.put("/update/:applicationId", authMiddleware(["recruiter"]), async (req, 
     if (notes) app.notes = notes;
     await app.save();
 
+    // ✅ Notification if enrolled
+    if (status === "enrolled") {
+      await Notification.create({
+        employee: app.candidate,
+        title: "Congratulations 🎉",
+        body: `You have been enrolled into the job group: ${app.jobGroup.title}`,
+        date: new Date(),
+        status: "unread"
+      });
+    }
+
     res.json(app);
   } catch (err) {
     console.error("Update route error:", err);
@@ -182,17 +193,90 @@ router.put("/bulk-update", authMiddleware(["recruiter"]), async (req, res) => {
       return res.status(400).json({ message: "Invalid status" });
     }
 
-    const updated = await Application.updateMany(
-      { _id: { $in: applicationIds } },
-      { $set: { status } }
-    );
+    const apps = await Application.find({ _id: { $in: applicationIds } }).populate("jobGroup");
+    await Application.updateMany({ _id: { $in: applicationIds } }, { $set: { status } });
 
-    res.json({ message: "Applications updated", modifiedCount: updated.modifiedCount });
+    // ✅ Create notifications for enrolled candidates
+    if (status === "enrolled") {
+      const notifications = apps.map((app) => ({
+        employee: app.candidate,
+        title: "Congratulations 🎉",
+        body: `You have been enrolled into the job group: ${app.jobGroup.title}`,
+        date: new Date(),
+        status: "unread"
+      }));
+      await Notification.insertMany(notifications);
+    }
+
+    res.json({ message: "Applications updated", modifiedCount: applicationIds.length });
   } catch (err) {
     console.error("Bulk update error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+router.post("/applyy/:inviteToken", authMiddleware(["candidate"]), async (req, res) => {
+  try {
+    const invite = await Invite.findOne({ token: req.params.inviteToken, used: false });
+    if (!invite) return res.status(400).json({ message: "Invalid or used invite" });
+
+    if (invite.expiresAt < new Date()) {
+      return res.status(400).json({ message: "Invite has expired" });
+    }
+
+    if (invite.email !== req.user.email) {
+      return res.status(403).json({ message: "Email mismatch" });
+    }
+
+    const jobGroup = await JobGroup.findById(invite.jobGroupId);
+    if (!jobGroup) return res.status(404).json({ message: "Job group not found" });
+
+    let application = await Application.findOne({
+      candidate: req.user.userId,
+      jobGroup: jobGroup._id
+    });
+
+    if (application) {
+      if (!["shortlisted", "rejected"].includes(application.status)) {
+        application.status = "enrolled";
+        await application.save();
+
+        // ✅ Create notification when enrolled via invite
+        await Notification.create({
+          employee: req.user.userId,
+          title: "Enrolled Successfully 🎉",
+          body: `You have been enrolled into the job group: ${jobGroup.title}`,
+          date: new Date(),
+          status: "unread"
+        });
+      }
+    } else {
+      application = await Application.create({
+        candidate: req.user.userId,
+        jobGroup: jobGroup._id,
+        status: "enrolled"
+      });
+
+      // ✅ Notification for new application via invite
+      await Notification.create({
+        employee: req.user.userId,
+        title: "Enrolled Successfully 🎉",
+        body: `You have been enrolled into the job group: ${jobGroup.title}`,
+        date: new Date(),
+        status: "unread"
+      });
+    }
+
+    invite.used = true;
+    await invite.save();
+
+    res.status(201).json(application);
+  } catch (err) {
+    console.error("❌ Error in /applyy:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 /**
  * ==========================

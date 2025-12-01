@@ -38,6 +38,7 @@ export default function MyApplications() {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'No deadline';
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
@@ -89,14 +90,11 @@ export default function MyApplications() {
           <div className="text-center py-12">
             <FiBriefcase className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-lg font-medium text-gray-900">No job groups yet</h3>
-            <p className="mt-1 text-sm text-gray-500">Get started by creating your first job group.</p>
+            <p className="mt-1 text-sm text-gray-500">
+              Get started by creating your first job group.
+            </p>
             <div className="mt-6">
-              <Link
-                href="/recruiter/create-job-group"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Create Job Group
-              </Link>
+             
             </div>
           </div>
         </div>
@@ -115,12 +113,7 @@ export default function MyApplications() {
             </p>
           </div>
           <div className="mt-4 sm:mt-0">
-            <Link
-              href="/recruiter/create-job-group"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Create New
-            </Link>
+            
           </div>
         </div>
 
@@ -153,13 +146,12 @@ export default function MyApplications() {
                             <span>Deadline: {formatDate(group.deadline)}</span>
                           </div>
                           <div className="flex items-center text-sm text-gray-500">
-  <FiUsers className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-  <span>
-    {group.applicationsCount || 0} application
-    {group.applicationsCount !== 1 ? 's' : ''}
-  </span>
-</div>
-
+                            <FiUsers className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
+                            <span>
+                              {group.applicationsCount || 0} application
+                              {group.applicationsCount !== 1 ? 's' : ''}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <div className="ml-5 flex-shrink-0">

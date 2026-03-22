@@ -9,6 +9,7 @@ export default function RecruitmentDashboard() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
+  const [errors, setErrors] = useState({});
   const [copiedCode, setCopiedCode] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -99,6 +100,17 @@ export default function RecruitmentDashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Frontend validation
+    if (!formData.title?.trim()) {
+      alert("Job title is required");
+      return;
+    }
+    if (!formData.description?.trim()) {
+      alert("Job description is required");
+      return;
+    }
+    
     try {
       const res = await api.post("/recruitment", formData); 
       setJobGroups((prev) => [res.data, ...prev]); 
@@ -130,7 +142,11 @@ export default function RecruitmentDashboard() {
       });
       setActiveTab(0);
     } catch (err) {
-      console.error("Error creating job group:", err.response?.data || err.message);
+      console.error("Error creating job group:", err);
+      console.error("Response status:", err.response?.status);
+      console.error("Response data:", err.response?.data);
+      console.error("Response headers:", err.response?.headers);
+      alert(`Error creating job group: ${err.response?.data?.message || err.message || 'Unknown error'}`);
     }
   };
 

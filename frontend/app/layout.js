@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import {AuthProvider} from "@/context/AuthProvider";
+import { AuthProvider } from "@/context/AuthProvider";
 import RouteLoader from "@/components/RouteLoader/RouteLoader";
+import { Suspense } from "react";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,12 +25,12 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <RouteLoader />
-              {children}
-          
-        
-        </AuthProvider>
+        <Suspense fallback={null}>
+          <AuthProvider>
+            <RouteLoader />
+            {children}
+          </AuthProvider>
+        </Suspense>
       </body>
     </html>
   );

@@ -1,11 +1,22 @@
-# Ignore all node_modules folders anywhere
-node_modules/
-frontend/node_modules/
-backend/node_modules/
-# Optional: ignore build artifacts
-dist/
-build/
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
 
-# Optional: ignore environment files
-.env
-.env.local
+# Virtual environment
+.venv/
+
+# Trained model weights
+*.pt
+*.bin
+*.safetensors
+
+# Study/reference md files
+INTERVIEW_PREP.md
+QUICK_REFERENCE.md
+
+# Next.js build
+frontend/.next/
+
+# Node modules
+node_modules/

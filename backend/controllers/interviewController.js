@@ -5,48 +5,10 @@ const Candidate = require("../models/Candidate");
 const User = require("../models/User");
 const JobGroup = require("../models/JobGroup");
 const AIInterviewLog = require("../models/AIInterviewLog");
-const { evaluateAnswers, model } = require("../services/gemini"); // Gemini AI service
+const { evaluateAnswers, generateQuestions } = require("../services/aiModel"); // Custom AI
 
-// ---------------- AI Question Generation ----------------
-async function generateQuestions(skills = []) {
-  try {
-    const prompt = `
-Generate 4 clear and concise technical interview questions for the following skills: ${skills.join(", ") || "IT"}.
-- Each question should be a complete sentence.
-- Do NOT include headings, numbers, or bullet symbols.
-- Return JSON ONLY in this format:
-
-{
-  "questions": [
-    "Question 1 text",
-    "Question 2 text",
-    "Question 3 text",
-    "Question 4 text"
-  ]
-}
-`;
-    const result = await model.generateContent(prompt);
-    const text = (await result.response.text()).trim();
-
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("Invalid AI response");
-
-    const json = JSON.parse(match[0]);
-    if (!json.questions || !Array.isArray(json.questions))
-      throw new Error("Questions missing");
-
-    return json.questions.slice(0, 4);
-  } catch (err) {
-    console.error("AI Question Error:", err.message);
-    // Fallback questions
-    return [
-      "Explain a recent project you worked on.",
-      "How do you handle debugging?",
-      "Explain OOP principles.",
-      "What is REST API?"
-    ];
-  }
-}
+// Question generation now handled by aiModel.js
+// It calls the Python FastAPI server with FLAN-T5 model
 
 // ---------------- CSV Upload + Scheduling ----------------
 exports.uploadCSV = async (req, res) => {

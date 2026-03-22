@@ -99,7 +99,57 @@ class ResumeParser:
                 "experience": [],
                 "education": []
             }
-    
+
+    def parse_resume_from_text(self, raw_text: str) -> Dict[str, Any]:
+        """Parse resume content from plain text (for DOC/DOCX conversion)"""
+        try:
+            lines_list = [l for l in raw_text.splitlines() if l.strip()]
+            lines = [{"text": l, "avg_size": 12, "has_bold": False} for l in lines_list]
+
+            urls = set([m.group(1) for m in self.url_regex.finditer(raw_text)])
+            emails = list(set(self.email_regex.findall(raw_text)))
+            link_classes = self._classify_links(list(urls))
+            phones = self._extract_phones(raw_text)
+            name = self._extract_name(lines)
+
+            headings = self._detect_headings(lines)
+            sections = self._build_sections(lines, headings)
+
+            skills = self._parse_skills(sections, raw_text)
+            certs, cert_links = self._parse_certifications(sections, list(urls))
+            projects = self._parse_projects(sections)
+            jobs = self._parse_experience(sections)
+            education = self._parse_education(sections)
+
+            return {
+                "name": name,
+                "email": emails[:3],
+                "phone": phones[:2],
+                "links": link_classes,
+                "cert_links": cert_links,
+                "skills": skills,
+                "certifications": certs,
+                "projects": projects,
+                "experience": jobs,
+                "education": education,
+                "parsing_status": "success"
+            }
+        except Exception as e:
+            return {
+                "parsing_status": "error",
+                "error_message": str(e),
+                "name": None,
+                "email": [],
+                "phone": [],
+                "links": {},
+                "cert_links": [],
+                "skills": [],
+                "certifications": [],
+                "projects": [],
+                "experience": [],
+                "education": []
+            }
+
     def match_skills_with_job(self, resume_skills: List[str], job_requirements: List[str]) -> Dict[str, Any]:
         """
         Match resume skills with job requirements

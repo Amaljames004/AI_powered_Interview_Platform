@@ -91,8 +91,8 @@ router.post("/", authMiddleware(["recruiter"]), async (req, res) => {
       attachments: Array.isArray(req.body.attachments) ? req.body.attachments : [], // file links
 
       salary: {
-        min: req.body?.salary?.min ?? undefined,
-        max: req.body?.salary?.max ?? undefined,
+        min: req.body?.salary?.min ? Number(req.body.salary.min) : undefined,
+        max: req.body?.salary?.max ? Number(req.body.salary.max) : undefined,
         currency: req.body?.salary?.currency || "INR",
         isNegotiable: req.body?.salary?.isNegotiable ?? true,
       },
@@ -105,8 +105,12 @@ router.post("/", authMiddleware(["recruiter"]), async (req, res) => {
 
       status: req.body.status || "draft",
       priority: req.body.priority || "medium",
-      skillsRequired: Array.isArray(req.body.skillsRequired) ? req.body.skillsRequired : [],
-      softSkills: Array.isArray(req.body.softSkills) ? req.body.softSkills : [],
+      skillsRequired: Array.isArray(req.body.skillsRequired)
+  ? req.body.skillsRequired.filter(s => s && s.name && s.name.trim() !== "")
+  : [],
+softSkills: Array.isArray(req.body.softSkills)
+  ? req.body.softSkills.filter(s => s && s.name && s.name.trim() !== "")
+  : [],
       evaluationCriteria: {
         technical: req.body?.evaluationCriteria?.technical ?? 0.5,
         softSkills: req.body?.evaluationCriteria?.softSkills ?? 0.2,
@@ -120,8 +124,9 @@ router.post("/", authMiddleware(["recruiter"]), async (req, res) => {
       miniProject: req.body.miniProject || "",
     };
 
-    if (!payload.timeline.applicationDeadline) {
-      return res.status(400).json({ message: "Application deadline is required" });
+    // Only require application deadline for non-draft job groups
+    if (payload.status !== "draft" && !payload.timeline.applicationDeadline) {
+      return res.status(400).json({ message: "Application deadline is required for published job groups", field: "timeline.applicationDeadline" });
     }
 
     const joinCode = await generateUniqueJoinCode();
@@ -144,7 +149,9 @@ router.post("/", authMiddleware(["recruiter"]), async (req, res) => {
     });
   } catch (err) {
     console.error("Error creating job group:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Request body:", req.body);
+    console.error("User:", req.user);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
@@ -264,8 +271,8 @@ router.patch("/:id", authMiddleware(["recruiter"]), async (req, res) => {
       );
     }
 
-    if (Array.isArray(req.body.skillsRequired)) setIfDefined("skillsRequired", req.body.skillsRequired);
-    if (Array.isArray(req.body.softSkills)) setIfDefined("softSkills", req.body.softSkills);
+    if (Array.isArray(req.body.skillsRequired)) setIfDefined("skillsRequired", req.body.skillsRequired.filter(s => s && s.name && s.name.trim() !== ""));
+    if (Array.isArray(req.body.softSkills)) setIfDefined("softSkills", req.body.softSkills.filter(s => s && s.name && s.name.trim() !== ""));
     if (Array.isArray(req.body.tags)) setIfDefined("tags", req.body.tags);
     if (Array.isArray(req.body.customForms)) setIfDefined("customForms", req.body.customForms);
     if (Array.isArray(req.body.benefits)) setIfDefined("benefits", req.body.benefits);

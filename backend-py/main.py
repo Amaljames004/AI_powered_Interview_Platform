@@ -114,26 +114,56 @@ async def health_check():
 @app.post("/parse-resume", response_model=ParsedResume)
 async def parse_resume(file: UploadFile = File(...)):
     """
-    Parse a PDF resume and extract structured information
+    Parse a resume (PDF, DOC, DOCX) and extract structured information
     """
-    # Validate file type
-    if not file.filename.endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported")
-    
-    if file.size > 10 * 1024 * 1024:  # 10MB limit
-        raise HTTPException(status_code=400, detail="File size too large (max 10MB)")
-    
+    # Validate file extension
+    filename = file.filename or ""
+    suffix = os.path.splitext(filename.lower())[1]
+    if suffix not in [".pdf", ".doc", ".docx"]:
+        raise HTTPException(status_code=400, detail="Only PDF, DOC, and DOCX files are supported")
+
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:  # 5MB limit
+        raise HTTPException(status_code=400, detail="File size too large (max 5MB)")
+
     try:
         # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-            content = await file.read()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
             tmp_file.write(content)
             tmp_path = tmp_file.name
-        
-        # Parse the resume
-        logger.info(f"Parsing resume: {file.filename}")
-        parsed_data = parser.parse_resume(tmp_path)
-        
+
+        parsed_data = None
+
+        if suffix == ".pdf":
+            logger.info(f"Parsing PDF resume: {file.filename}")
+            parsed_data = parser.parse_resume(tmp_path)
+        else:
+            logger.info(f"Parsing {suffix} resume: {file.filename}")
+            # Convert DOC/DOCX to text
+            text_content = ""
+            try:
+                import mammoth
+                if suffix == ".docx":
+                    with open(tmp_path, "rb") as docx_file:
+                        text_content = mammoth.extract_raw_text(docx_file).value
+                else:
+                    # For .doc, try pypandoc first
+                    try:
+                        import pypandoc
+                        text_content = pypandoc.convert_file(tmp_path, 'plain')
+                    except Exception as e:
+                        logger.warning(f"DOC conversion via pypandoc failed: {e}")
+                        raise
+            except ModuleNotFoundError:
+                raise HTTPException(status_code=500, detail="Conversion library not installed for DOC/DOCX parsing (mammoth/pypandoc required)")
+            except Exception as ex:
+                raise HTTPException(status_code=500, detail=f"Failed to convert resume to text: {str(ex)}")
+
+            if not text_content.strip():
+                raise HTTPException(status_code=400, detail="Resume text extraction failed")
+
+            parsed_data = parser.parse_resume_from_text(text_content)
+
         # Clean up temp file
         os.unlink(tmp_path)
 
@@ -167,9 +197,9 @@ async def parse_resume(file: UploadFile = File(...)):
             parsed_data['links'] = parsed_data.get('links') or {"linkedin": ["https://linkedin.com/in/placeholder"], "github_profiles": [], "github_repos": [], "portfolio": [], "other": []}
             parsed_data['skills'] = parsed_data.get('skills') or ["Python", "FastAPI", "Machine Learning"]
             parsed_data['certifications'] = parsed_data.get('certifications') or []
-            parsed_data['projects'] = parsed_data.get('projects') or [Project(title="Placeholder Project", summary="This is a placeholder project summary.", tech=["Python", "FastAPI"]).dict()]
-            parsed_data['experience'] = parsed_data.get('experience') or [Experience(text="Placeholder Experience", role="Software Engineer", org="Placeholder Corp", date_range="Jan 2022 - Present").dict()]
-            parsed_data['education'] = parsed_data.get('education') or [Education(degree="B.Tech in Computer Science", institution="Placeholder University", duration="2018 - 2022", score="8.5 CGPA").dict()]
+            parsed_data['projects'] = parsed_data.get('projects') or [Project(title="Placeholder Project", summary="This is a placeholder project summary.", tech=["Python", "FastAPI"]).model_dump()]
+            parsed_data['experience'] = parsed_data.get('experience') or [Experience(text="Placeholder Experience", role="Software Engineer", org="Placeholder Corp", date_range="Jan 2022 - Present").model_dump()]
+            parsed_data['education'] = parsed_data.get('education') or [Education(degree="B.Tech in Computer Science", institution="Placeholder University", duration="2018 - 2022", score="8.5 CGPA").model_dump()]
             
             parsed_data['parsing_status'] = "processing_for_accuracy"
             parsed_data['confidence_score'] = 20.0 # Low confidence for incomplete parsing
@@ -272,4 +302,4 @@ def calculate_confidence_score(parsed_data: dict) -> float:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8003)

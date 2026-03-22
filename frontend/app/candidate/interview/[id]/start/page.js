@@ -161,38 +161,72 @@ export default function InterviewStartPage() {
   };
 
   // Start recording / speech recognition
-  const handleStartRecording = () => {
-    if (!streamRef.current) {
-      setMediaError("No audio/video stream available");
-      return;
-    }
+const handleStartRecording = () => {
+  if (!streamRef.current) {
+    setMediaError("No audio/video stream available");
+    return;
+  }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setMediaError("Speech recognition not supported in this browser");
-      return;
-    }
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    setMediaError("Speech recognition not supported. Please use Google Chrome.");
+    return;
+  }
 
-    const recognition = new SpeechRecognition();
-    recognitionRef.current = recognition;
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
+  // Reset transcript for new question
+  setTranscript("");
+  let fullTranscript = ""; // accumulates ALL speech
 
-    recognition.onresult = (event) => {
-      let text = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        text += event.results[i][0].transcript;
+  const recognition = new SpeechRecognition();
+  recognitionRef.current = recognition;
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = "en-US";
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = (event) => {
+    let interimText = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      if (result.isFinal) {
+        // Final result — add to permanent transcript
+        fullTranscript += result[0].transcript + " ";
+      } else {
+        // Interim — show live but don't save yet
+        interimText += result[0].transcript;
       }
-      setTranscript(text);
-    };
-
-    recognition.onerror = (err) => console.error("Speech recognition error:", err);
-
-    recognition.start();
-    setIsRecording(true);
-    setTimeLeft(120);
+    }
+    // Show full accumulated + current interim
+    setTranscript(fullTranscript + interimText);
   };
+
+  recognition.onerror = (event) => {
+    // "no-speech" is normal — restart automatically
+    if (event.error === "no-speech") {
+      recognition.stop();
+      setTimeout(() => {
+        if (isRecording) recognition.start();
+      }, 300);
+      return;
+    }
+    // "aborted" happens when we manually stop — ignore it
+    if (event.error === "aborted") return;
+
+    console.error("Speech recognition error:", event.error);
+    setMediaError(`Microphone error: ${event.error}. Try refreshing.`);
+  };
+
+  recognition.onend = () => {
+    // Auto-restart if still recording (handles Chrome auto-stop)
+    if (recognitionRef.current && isRecording) {
+      try { recognition.start(); } catch(e) {}
+    }
+  };
+
+  recognition.start();
+  setIsRecording(true);
+  setTimeLeft(120);
+};
 
   const stopRecordingAndSave = () => {
     if (!isRecording) return;
@@ -200,9 +234,14 @@ export default function InterviewStartPage() {
     if (recognitionRef.current) recognitionRef.current.stop();
 
     const currentQ = interview.questions[index];
+    // Use the latest transcript value via DOM ref to get accumulated text
+    const finalAnswer = document.getElementById("transcript-store")?.dataset?.value
+      || transcript
+      || "No answer provided";
+
     const answerObj = {
       questionId: currentQ._id,
-      answerText: transcript || "No answer provided",
+      answerText: finalAnswer,
       answerMode: "text",
     };
 
@@ -464,6 +503,8 @@ export default function InterviewStartPage() {
             </div>
 
             {/* Transcript Card */}
+             {/* Hidden transcript store for reliable access on stop */}
+            <div id="transcript-store" data-value={transcript} style={{display:"none"}} />
             {transcript && (
               <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
                 <div className="flex items-center gap-3 mb-4">

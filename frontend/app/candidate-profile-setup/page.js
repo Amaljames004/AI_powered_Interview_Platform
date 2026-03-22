@@ -582,7 +582,7 @@ const SpringModal = ({ isOpen, setIsOpen }) => {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await axios.post("http://localhost:8000/parse-resume", formData, {
+      const res = await axios.post("http://localhost:8003/parse-resume", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

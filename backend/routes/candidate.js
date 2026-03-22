@@ -19,8 +19,35 @@ try {
 const router = express.Router();
 
 // ==================
-// Multer setup
+// Multer setup for resumes
 // ==================
+const resumeStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+
+const resumeFileFilter = (req, file, cb) => {
+  const allowedTypes = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only PDF, DOC, and DOCX files are allowed"), false);
+  }
+};
+
+const upload = multer({ 
+  storage: resumeStorage, 
+  fileFilter: resumeFileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
 
 
 // ==================
@@ -135,6 +162,43 @@ router.get("/skills", authMiddleware(["candidate"]), async (req, res) => {
     res.json({ skills: candidate.skills || [] });
   } catch (err) {
     console.error("Error fetching candidate skills:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// =====================
+// POST upload resume
+// =====================
+router.post("/upload/resume", authMiddleware(["candidate"]), upload.single("resume"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No resume file provided" });
+    }
+
+    const candidate = await Candidate.findOneAndUpdate(
+      { user: req.user.userId },
+      {
+        resume: {
+          filename: req.file.filename,
+          originalName: req.file.originalname,
+          path: req.file.path,
+          size: req.file.size,
+          uploadedAt: new Date()
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!candidate) {
+      return res.status(404).json({ message: "Candidate profile not found" });
+    }
+
+    res.json({
+      message: "Resume uploaded successfully",
+      resume: candidate.resume
+    });
+  } catch (err) {
+    console.error("Error uploading resume:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

@@ -5,12 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
 import api from '@/utils/axios';
 
-'use client';
-
-import { useEffect, useState, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthProvider';
-import api from '@/utils/axios';
 
 export default function InvitePage() {
   const searchParams = useSearchParams();

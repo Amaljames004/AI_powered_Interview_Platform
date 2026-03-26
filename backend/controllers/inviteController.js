@@ -1,7 +1,7 @@
 const fs = require("fs");
 const csvParser = require("csv-parser");
 const crypto = require("crypto");
-const Invite = require("../models/invite");
+const Invite = require("../models/Invite");
 const sendEmail = require("../utils/sendEmail"); // your custom sendEmail
 
 // Generate random token

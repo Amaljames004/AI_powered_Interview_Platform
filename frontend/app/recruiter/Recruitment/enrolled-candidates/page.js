@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 import api from '@/utils/axios';
 import { useRouter } from 'next/navigation';
-import { User, ClipboardList, CalendarDays, Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthProvider';
+import BackButton from '@/components/BackButton';
 
 export default function ManagerAssignDutyPage() {
   const [employees, setEmployees] = useState([]);
@@ -116,6 +116,7 @@ export default function ManagerAssignDutyPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-6 lg:p-8">
+      <BackButton href="/recruiter/dashboard" />
       <div className="flex items-center gap-3 mb-8">
         <User className="w-8 h-8 text-blue-600" />
         <div>

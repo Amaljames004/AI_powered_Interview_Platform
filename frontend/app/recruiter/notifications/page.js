@@ -8,6 +8,7 @@ import {
 
 import { useAuth } from '@/context/AuthProvider'; 
 import api from '@/utils/axios';
+import BackButton from '@/components/BackButton';
 
 
 export default function NotificationSendPage() {
@@ -101,6 +102,7 @@ useEffect(() => {
 
     return (
         <div className="max-w-4xl mx-auto p-6">
+            <BackButton href="/recruiter/dashboard" />
             <div className="flex items-center gap-3 mb-6">
                 <Send className="w-6 h-6 text-indigo-600" />
                 <div>

@@ -120,6 +120,33 @@ export default function InterviewDetailsPage() {
       return;
     }
 
+    const startTimeRaw = interview.startTime || interview.date || interview.start;
+    const endTimeRaw = interview.endTime;
+
+    if (interview.status === "scheduled" && startTimeRaw && endTimeRaw) {
+      const now = new Date();
+      const startWindow = new Date(startTimeRaw);
+      startWindow.setMinutes(startWindow.getMinutes() - 5);
+      const endWindow = new Date(endTimeRaw);
+
+      if (now < startWindow) {
+        alert("Interview is not yet open. Please wait until your scheduled time.");
+        return;
+      }
+      if (now > endWindow) {
+        alert("The scheduled time for this interview has passed.");
+        return;
+      }
+    }
+
+    try {
+      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (err) {
+      console.warn("Fullscreen request failed:", err);
+    }
+
     setStarting(true);
     try {
       const candidateId = interview.candidate?._id || interview.candidate || interview.candidateId;
@@ -179,7 +206,7 @@ export default function InterviewDetailsPage() {
           <p className="text-lg font-semibold mb-2">Interview Not Found</p>
           <p className="text-gray-600 mb-6">The interview session you're looking for doesn't exist or has expired.</p>
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/candidate/interview-history')}
             className="bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors"
           >
             Go Back
@@ -192,16 +219,10 @@ export default function InterviewDetailsPage() {
   const startTime = interview.startTime || interview.date || interview.start;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors bg-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md"
-          >
-            ← Back
-          </button>
+    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900">Interview Preparation</h1>
             <p className="text-gray-600">Get ready for your assessment</p>
@@ -357,28 +378,44 @@ export default function InterviewDetailsPage() {
                 </p>
               </div>
 
-              <button
-                onClick={startInterview}
-                disabled={!permissionsOK || starting}
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-lg font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg"
-              >
-                {starting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Starting Interview...
-                  </>
-                ) : (
-                  <>
-                    <FiUser className="text-xl" />
-                    Start Interview Now
-                  </>
-                )}
-              </button>
+              {interview?.status === "completed" ? (
+                <div className="text-center bg-gray-50 p-6 rounded-xl border border-gray-200 mt-2">
+                  <p className="text-gray-800 font-semibold mb-4">
+                    You have already completed this interview.
+                  </p>
+                  <button
+                    onClick={() => router.push(`/candidate/interview/${id}/result`)}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow"
+                  >
+                    View Results
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={startInterview}
+                    disabled={!permissionsOK || starting}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-lg font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    {starting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Starting Interview...
+                      </>
+                    ) : (
+                      <>
+                        <FiUser className="text-xl" />
+                        Start Interview Now
+                      </>
+                    )}
+                  </button>
 
-              {!permissionsOK && (
-                <p className="text-red-500 text-sm text-center mt-3">
-                  Complete system checks before starting
-                </p>
+                  {!permissionsOK && (
+                    <p className="text-red-500 text-sm text-center mt-3">
+                      Complete system checks before starting
+                    </p>
+                  )}
+                </>
               )}
             </div>
 

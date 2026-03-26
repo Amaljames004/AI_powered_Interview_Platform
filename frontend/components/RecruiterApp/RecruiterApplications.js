@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import api from '@/utils/axios';
 import { useAuth } from '@/context/AuthProvider';
+import IntegrityLogViewer from '@/components/IntegrityLogViewer';
+import React from 'react';
 
 const statusColors = {
   pending: 'bg-amber-100 text-amber-800',
@@ -273,7 +275,8 @@ export default function RecruiterApplications({ jobGroupId }) {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredApplications.map((app) => (
-                    <tr key={app._id} className="hover:bg-gray-50 transition-colors">
+                    <React.Fragment key={app._id}>
+                    <tr className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <input
                           type="checkbox"
@@ -350,6 +353,12 @@ export default function RecruiterApplications({ jobGroupId }) {
                         </select>
                       </td>
                     </tr>
+                    <tr className="bg-gray-50/30">
+                      <td colSpan="6" className="px-6 py-2 border-b border-gray-100">
+                        <IntegrityLogViewer sessionId={app.interviewLogId || app._id} candidateName={app.candidate?.name || 'Unknown'} />
+                      </td>
+                    </tr>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

@@ -9,9 +9,10 @@ const AI_SERVER = process.env.AI_SERVER_URL || "http://localhost:8000";
  */
 async function generateQuestions(skills = []) {
   try {
+    const seed = Math.floor(Math.random() * 100000);
     const response = await axios.post(
       `${AI_SERVER}/generate-questions`,
-      { skills },
+      { skills, seed },
       { timeout: 30000 } // 30 second timeout
     );
     const questions = response.data.questions;

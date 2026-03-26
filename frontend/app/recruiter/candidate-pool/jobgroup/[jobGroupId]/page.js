@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import BackButton from "@/components/BackButton";
 
 function ProgressTracker() {
   const [isVisible, setIsVisible] = useState(false);
@@ -82,6 +83,7 @@ export default function JobGroupDashboardPage() {
   return (
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-7xl mx-auto">
+        <BackButton href="/recruiter/candidate-pool" />
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

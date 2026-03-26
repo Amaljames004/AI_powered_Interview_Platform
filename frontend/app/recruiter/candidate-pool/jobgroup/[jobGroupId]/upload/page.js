@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import api from "@/utils/axios";
+import BackButton from "@/components/BackButton";
 
 export default function UploadCandidates() {
   const { jobGroupId } = useParams();
@@ -112,6 +113,7 @@ export default function UploadCandidates() {
   return (
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-4xl mx-auto">
+        <BackButton href={`/recruiter/candidate-pool/jobgroup/${jobGroupId}`} />
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">

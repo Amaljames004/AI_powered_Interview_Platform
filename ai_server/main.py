@@ -9,10 +9,16 @@ from transformers import (
 )
 import torch
 import torch.nn as nn
-from typing import List
+from typing import List, Optional
 import logging
 import threading
 import time
+import sys
+import os
+
+# Add scorer model directory to path so we can import InterviewScorer
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "skillhire_scorer_model"))
+from model import InterviewScorer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai_server")
@@ -41,25 +47,27 @@ def load_models_async():
     global q_tokenizer, q_model, s_tokenizer, s_model, models_loaded
 
     try:
-        logger.info("Loading FLAN-T5 model... (first run downloads ~900MB)")
-        Q_MODEL_NAME = "google/flan-t5-base"
+        logger.info("Loading fine-tuned FLAN-T5 model from ./skillhire_question_model...")
+        Q_MODEL_NAME = "./skillhire_question_model"
         q_tokenizer = T5Tokenizer.from_pretrained(Q_MODEL_NAME)
         q_model = T5ForConditionalGeneration.from_pretrained(Q_MODEL_NAME)
         q_model.eval()
-        logger.info("✅ FLAN-T5 loaded")
+        logger.info("✅ Fine-tuned FLAN-T5 loaded")
     except Exception as e:
         logger.error(f"Failed to load FLAN-T5: {e}")
         q_tokenizer = None
         q_model = None
 
     try:
-        logger.info("Loading RoBERTa model... (first run downloads ~500MB)")
+        logger.info("Loading trained RoBERTa scorer from ./skillhire_scorer_model...")
         s_tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
         s_model = InterviewScorer()
+        weights_path = os.path.join(os.path.dirname(__file__), "skillhire_scorer_model", "weights.pt")
+        s_model.load_state_dict(torch.load(weights_path, map_location="cpu"))
         s_model.eval()
-        logger.info("✅ RoBERTa loaded")
+        logger.info("✅ Trained RoBERTa scorer loaded")
     except Exception as e:
-        logger.error(f"Failed to load RoBERTa: {e}")
+        logger.error(f"Failed to load RoBERTa scorer: {e}")
         s_tokenizer = None
         s_model = None
 
@@ -75,6 +83,7 @@ model_thread.start()
 # ============================================================
 class SkillsRequest(BaseModel):
     skills: List[str]
+    seed: Optional[int] = None
 
 class ScoreRequest(BaseModel):
     question: str
@@ -110,6 +119,9 @@ def generate_questions(body: SkillsRequest):
         }
 
     try:
+        if body.seed is not None:
+            torch.manual_seed(body.seed)
+
         skills_str = ", ".join(body.skills) if body.skills else "software development"
 
         # Generate 4 questions using beam search with num_return_sequences
@@ -133,7 +145,7 @@ def generate_questions(body: SkillsRequest):
                 no_repeat_ngram_size=3,
                 early_stopping=True,
                 temperature=0.7,
-                do_sample=False,
+                do_sample=True,
             )
             question = q_tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
             if question and question not in questions:
@@ -192,7 +204,8 @@ def score_answer(body: ScoreRequest):
                 input_ids=inputs["input_ids"],
                 attention_mask=inputs["attention_mask"]
             )
-        result = {k: round(v, 1) for k, v in scores.items()}
+        # Scale sigmoid outputs (0-1) to 0-10 range
+        result = {k: round(v.item() * 10, 1) for k, v in scores.items()}
         logger.info(f"Scored answer: {result}")
         return result
 

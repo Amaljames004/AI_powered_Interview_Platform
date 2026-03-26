@@ -5,6 +5,10 @@ import { useParams } from "next/navigation";
 import api from "@/utils/axios";
 import Image from "next/image";
 import * as XLSX from "xlsx";
+import IntegrityBadge from '@/components/IntegrityBadge';
+import IntegrityLogViewer from '@/components/IntegrityLogViewer';
+import React from 'react';
+import BackButton from "@/components/BackButton";
 
 export default function CandidatesManagerPage() {
   const { jobGroupId } = useParams();
@@ -168,6 +172,7 @@ export default function CandidatesManagerPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <BackButton href={`/recruiter/candidate-pool/jobgroup/${jobGroupId}`} />
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -422,11 +427,13 @@ export default function CandidatesManagerPage() {
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Interview Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Integrity</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {paginatedCandidates.map((c) => (
-                  <tr key={c.applicationId} className="hover:bg-gray-50 transition-colors group">
+                  <React.Fragment key={c.applicationId}>
+                  <tr className="hover:bg-gray-50 transition-colors group">
                     <td className="px-6 py-4">
                       <input
                         type="checkbox"
@@ -509,7 +516,21 @@ export default function CandidatesManagerPage() {
                         {c.interviewStatus}
                       </span>
                     </td>
+                    <td className="px-6 py-4">
+                      {c.interviewLogId ? (
+                        <IntegrityBadge sessionId={c.interviewLogId} />
+                      ) : (
+                        <span className="text-xs text-gray-400">N/A</span>
+                      )}
+                    </td>
                   </tr>
+                  {/* Integrity Log Viewer Row */}
+                    <tr className="bg-gray-50/30">
+                      <td colSpan="8" className="px-6 py-2 border-b border-gray-100">
+                        <IntegrityLogViewer sessionId={c.interviewLogId || c.candidateId} candidateName={c.name} />
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

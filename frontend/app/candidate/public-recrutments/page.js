@@ -1,5 +1,5 @@
+"use client";
 import { FaTools, FaClock } from 'react-icons/fa';
-
 export default function ComingSoon() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center overflow-hidden  ">

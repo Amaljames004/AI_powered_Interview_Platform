@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { FiHome, FiGlobe, FiMapPin, FiClipboard, FiImage, FiEdit2, FiCheck, FiX } from "react-icons/fi";
 import api from "@/utils/axios";
+import BackButton from "@/components/BackButton";
 
 export default function CompanyProfileForm() {
   const [form, setForm] = useState({
@@ -70,6 +71,7 @@ export default function CompanyProfileForm() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      <BackButton href="/recruiter/dashboard" />
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* Header */}
         <div className="bg-gray-50 px-6 py-5 border-b border-gray-200 flex justify-between items-center">

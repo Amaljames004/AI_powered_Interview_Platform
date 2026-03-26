@@ -2,12 +2,28 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import api from "@/utils/axios";
+import { useAuth } from "@/context/AuthProvider";
+import useIntegrityMonitor from "@/hooks/useIntegrityMonitor";
+import FaceMonitor from "@/components/FaceMonitor";
 
 export default function InterviewStartPage() {
   const { id } = useParams();
   const search = useSearchParams();
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  
+  const handleViolationRef = useRef(null);
+  const { startMonitoring, stopMonitoring } = useIntegrityMonitor((type) => {
+    if (handleViolationRef.current) handleViolationRef.current(type);
+  });
   const initialIndex = Number(search?.get("index") || 0);
+
+  // Constraint 1: Redirect recruiters away from interview
+  useEffect(() => {
+    if (!authLoading && user?.role === "recruiter") {
+      router.replace("/recruiter/dashboard");
+    }
+  }, [authLoading, user, router]);
 
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,14 +35,22 @@ export default function InterviewStartPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [answers, setAnswers] = useState([]);
   const [transcript, setTranscript] = useState("");
+  const [liveTranscript, setLiveTranscript] = useState("");
   const [mediaError, setMediaError] = useState(null);
   const [feedback, setFeedback] = useState("");
   const [ttsReady, setTtsReady] = useState(false);
+
+  const [warningCount, setWarningCount] = useState(0);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState("");
+  const isSubmittingRef = useRef(false);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const recognitionRef = useRef(null);
   const utteranceRef = useRef(null);
+  const isRecordingRef = useRef(false);
+  const currentAnswerRef = useRef("");
 
   const feedbackMessages = [
     "Great job! Ready for the next question?",
@@ -56,13 +80,32 @@ export default function InterviewStartPage() {
     }
   }, []);
 
-  // Fetch interview data
+  // Fetch interview data and start integrity monitoring
   useEffect(() => {
     const fetchInterview = async () => {
       try {
         const res = await api.get(`/interview/${id}`);
+        if (res.data.status === "completed") {
+          router.replace(`/candidate/interview/${id}/result`);
+          return;
+        }
         setInterview(res.data);
+
+        // Start integrity monitoring
+        const candidateId = res.data.candidate?._id || res.data.candidate;
+        if (id && candidateId) {
+          startMonitoring(id, candidateId);
+        }
         
+        // Auto-enter fullscreen
+        try {
+          if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+          }
+        } catch (err) {
+          console.warn('Fullscreen blocked by browser, user needs to interact first', err);
+        }
+
         // Speak first question after data loads
         if (res.data.questions && res.data.questions.length > 0 && ttsReady) {
           setTimeout(() => {
@@ -77,7 +120,87 @@ export default function InterviewStartPage() {
       }
     };
     if (id) fetchInterview();
-  }, [id, ttsReady]);
+
+    return () => {
+      stopMonitoring();
+    };
+  }, [id, ttsReady, startMonitoring, stopMonitoring]);
+
+  // Integrity warning handler
+  useEffect(() => {
+    handleViolationRef.current = (type) => {
+      if (isSubmittingRef.current) return;
+      
+      setWarningCount((prev) => {
+        const nextCount = prev + 1;
+        let reason = type === 'tab_switch' ? 'You switched tabs or minimized the window.' : 'You clicked outside the interview window.';
+        if (type === 'fullscreen_exit') reason = 'You exited fullscreen.';
+
+        if (nextCount === 1) {
+          setWarningMessage(`${reason} Warning 1 of 2: Do not switch tabs or leave the window.`);
+          setShowWarningModal(true);
+        } else if (nextCount === 2) {
+          setWarningMessage(`${reason} Warning 2 of 2: Final warning. Next violation will auto-submit.`);
+          setShowWarningModal(true);
+        } else if (nextCount >= 3) {
+          setWarningMessage(`Integrity violation. Auto-submitting interview...`);
+          setShowWarningModal(true);
+          submitAllAnswers(); // We can call this directly since the ref holds the latest
+        }
+        return nextCount;
+      });
+    };
+  }, []);
+
+  // Fullscreen monitor
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && !isSubmittingRef.current) {
+        if (handleViolationRef.current) handleViolationRef.current('fullscreen_exit');
+        try {
+          document.documentElement.requestFullscreen();
+        } catch(e) {}
+      }
+    };
+    
+    // Prevent context menu (right-click) globally
+    const handleContextMenu = (e) => e.preventDefault();
+
+    // Prevent key combinations (DevTools, Copy, Paste, PrintScreen)
+    const handleKeyDown = (e) => {
+      if (
+        (e.ctrlKey && ['c', 'v', 'x', 'p', 'i'].includes(e.key.toLowerCase())) ||
+        (e.metaKey && ['c', 'v', 'x', 'p', 'i'].includes(e.key.toLowerCase())) ||
+        e.key === 'PrintScreen' ||
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && ['i', 'c', 'j'].includes(e.key.toLowerCase()))
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    // Prevent copy/paste/cut globally via events
+    const handleCopyPaste = (e) => {
+      e.preventDefault();
+      alert("Clipboard actions are disabled during the interview.");
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("copy", handleCopyPaste);
+    document.addEventListener("paste", handleCopyPaste);
+    document.addEventListener("cut", handleCopyPaste);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("copy", handleCopyPaste);
+      document.removeEventListener("paste", handleCopyPaste);
+      document.removeEventListener("cut", handleCopyPaste);
+    };
+  }, []);
 
   // Setup webcam
   useEffect(() => {
@@ -160,7 +283,7 @@ export default function InterviewStartPage() {
     window.speechSynthesis.speak(utter);
   };
 
-  // Start recording / speech recognition
+// Start recording / speech recognition
 const handleStartRecording = () => {
   if (!streamRef.current) {
     setMediaError("No audio/video stream available");
@@ -169,75 +292,74 @@ const handleStartRecording = () => {
 
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    setMediaError("Speech recognition not supported. Please use Google Chrome.");
+    alert("Your browser does not support speech recognition. Use Chrome.");
     return;
   }
 
   // Reset transcript for new question
   setTranscript("");
-  let fullTranscript = ""; // accumulates ALL speech
-
+  setLiveTranscript("");
+  currentAnswerRef.current = "";
+  
   const recognition = new SpeechRecognition();
-  recognitionRef.current = recognition;
   recognition.continuous = true;
   recognition.interimResults = true;
-  recognition.lang = "en-US";
+  recognition.lang = 'en-US';
   recognition.maxAlternatives = 1;
 
+  let finalTranscript = '';
+
   recognition.onresult = (event) => {
-    let interimText = "";
+    let interimText = '';
     for (let i = event.resultIndex; i < event.results.length; i++) {
-      const result = event.results[i];
-      if (result.isFinal) {
-        // Final result — add to permanent transcript
-        fullTranscript += result[0].transcript + " ";
+      const tr = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += tr + ' ';
       } else {
-        // Interim — show live but don't save yet
-        interimText += result[0].transcript;
+        interimText += tr;
       }
     }
-    // Show full accumulated + current interim
-    setTranscript(fullTranscript + interimText);
+    const combined = finalTranscript + interimText;
+    currentAnswerRef.current = combined;
+    setTranscript(combined);
+    setLiveTranscript(interimText || 'Listening...');
   };
 
   recognition.onerror = (event) => {
-    // "no-speech" is normal — restart automatically
-    if (event.error === "no-speech") {
-      recognition.stop();
-      setTimeout(() => {
-        if (isRecording) recognition.start();
-      }, 300);
-      return;
+    console.error('Speech recognition error:', event.error);
+    if (event.error === 'no-speech' && isRecordingRef.current) {
+        try { recognition.start(); } catch(e) {}
     }
-    // "aborted" happens when we manually stop — ignore it
-    if (event.error === "aborted") return;
-
-    console.error("Speech recognition error:", event.error);
-    setMediaError(`Microphone error: ${event.error}. Try refreshing.`);
+    if (event.error === 'network') setLiveTranscript('Network error - check connection');
   };
 
   recognition.onend = () => {
-    // Auto-restart if still recording (handles Chrome auto-stop)
-    if (recognitionRef.current && isRecording) {
-      try { recognition.start(); } catch(e) {}
+    // Auto restart if still in recording mode
+    if (isRecordingRef.current) {
+       try { recognition.start(); } catch(e) {}
     }
   };
 
+  recognitionRef.current = recognition;
   recognition.start();
   setIsRecording(true);
+  isRecordingRef.current = true;
   setTimeLeft(120);
 };
 
   const stopRecordingAndSave = () => {
     if (!isRecording) return;
     setIsRecording(false);
-    if (recognitionRef.current) recognitionRef.current.stop();
+    isRecordingRef.current = false;
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setLiveTranscript("");
 
     const currentQ = interview.questions[index];
-    // Use the latest transcript value via DOM ref to get accumulated text
-    const finalAnswer = document.getElementById("transcript-store")?.dataset?.value
-      || transcript
-      || "No answer provided";
+    const finalAnswer = currentAnswerRef.current || transcript || "No answer provided";
+    currentAnswerRef.current = "";
 
     const answerObj = {
       questionId: currentQ._id,
@@ -308,9 +430,22 @@ const handleStartRecording = () => {
   };
 
   const submitAllAnswers = async () => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsSaving(true);
+    stopMonitoring();
+    
+    // Stop transcription if still going
+    if (recognitionRef.current) recognitionRef.current.stop();
+
     try {
       await api.post("/interview/submit", { logId: id, answers });
+      
+      // Cleanup events
+      try {
+        if (document.fullscreenElement) document.exitFullscreen();
+      } catch(e) {}
+      
       router.push(`/candidate/interview/${id}/result`);
     } catch (err) {
       console.error("Submit Answers Error:", err);
@@ -327,7 +462,12 @@ const handleStartRecording = () => {
     }
   };
 
-  if (loading)
+  // Block rendering for recruiters
+  if (!authLoading && user?.role === "recruiter") {
+    return null;
+  }
+
+  if (loading || authLoading)
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
@@ -359,8 +499,36 @@ const handleStartRecording = () => {
   const progress = ((index + 1) / totalQs) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 select-none">
+      {/* WARNING BANNER */}
+      {warningCount > 0 && warningCount < 3 && (
+        <div className={`fixed top-0 left-0 w-full z-[100] py-3 px-4 text-center text-white font-bold shadow-md ${warningCount === 1 ? 'bg-yellow-500' : 'bg-orange-500'}`}>
+          ⚠️ Warnings: {warningCount}/2 - Please stay in fullscreen and do not switch tabs.
+        </div>
+      )}
+
+      {/* WARNING MODAL */}
+      {showWarningModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center">
+             <div className="text-red-500 text-5xl mb-4">⚠️</div>
+             <h3 className="text-2xl font-bold text-gray-900 mb-2">Integrity Violation</h3>
+             <p className="text-gray-700 mb-6 font-medium">{warningMessage}</p>
+             <button 
+               onClick={() => {
+                 setShowWarningModal(false);
+                 try { document.documentElement.requestFullscreen(); } catch(e){}
+               }}
+               className="bg-red-600 hover:bg-red-700 text-white w-full py-3 rounded-xl font-bold transition-all"
+             >
+               I Understand - Return to Interview
+             </button>
+          </div>
+        </div>
+      )}
+
+      <div className={`max-w-6xl mx-auto ${warningCount > 0 ? "mt-12" : ""}`}>
+
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-200">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
@@ -502,16 +670,22 @@ const handleStartRecording = () => {
               </div>
             </div>
 
-            {/* Transcript Card */}
-             {/* Hidden transcript store for reliable access on stop */}
+            {isRecording && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-500 font-medium mb-1">🎤 Live transcription:</p>
+                <p className="text-sm text-blue-800">{liveTranscript || 'Listening...'}</p>
+              </div>
+            )}
+
+            {/* Hidden transcript store for reliable access on stop */}
             <div id="transcript-store" data-value={transcript} style={{display:"none"}} />
-            {transcript && (
+            {transcript && !isRecording && (
               <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="bg-purple-100 w-8 h-8 rounded-full flex items-center justify-center">
                     <span className="text-purple-600 font-bold">📝</span>
                   </div>
-                  <h2 className="text-lg font-semibold text-gray-800">Live Transcript</h2>
+                  <h2 className="text-lg font-semibold text-gray-800">Final Transcript</h2>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg border max-h-48 overflow-y-auto">
                   <p className="text-gray-700 leading-relaxed">{transcript}</p>
@@ -565,6 +739,12 @@ const handleStartRecording = () => {
             </div>
           </div>
         </div>
+
+        {/* Face Monitor for integrity tracking */}
+        <FaceMonitor
+          sessionId={id}
+          candidateId={interview.candidate?._id || interview.candidate}
+        />
       </div>
     </div>
   );

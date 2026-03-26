@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api from '@/utils/axios'; // your axios instance
+import api from '@/utils/axios';
+import { useParams } from 'next/navigation';
+import BackButton from '@/components/BackButton';
 
 export default function InviteProgressPage() {
-  const [jobGroupId, setJobGroupId] = useState('');
+  const params = useParams();
+  const routeJobGroupId = params?.jobGroupId || '';
+  const [jobGroupId, setJobGroupId] = useState(routeJobGroupId);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState('');
   const [isPolling, setIsPolling] = useState(false);
@@ -40,6 +44,7 @@ export default function InviteProgressPage() {
 
   return (
     <div className="max-w-lg mx-auto mt-20 p-6 rounded-xl shadow-md border">
+      <BackButton href={`/recruiter/candidate-pool/jobgroup/${routeJobGroupId || 'fallback'}/upload`} />
       <h1 className="text-2xl font-bold mb-4 text-center">📊 Invite Upload Progress</h1>
 
       <div className="mb-4">

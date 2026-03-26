@@ -41,9 +41,9 @@ export default function CandidateHistory() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">My Interview History</h1>
-
+    <div className="max-w-4xl mx-auto mt-10 p-6 bg-white shadow-lg rounded-lg border border-gray-200">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Interview History</h2>
+      
       <div className="space-y-4">
         {history.map((i) => (
           <div
@@ -57,9 +57,9 @@ export default function CandidateHistory() {
                 {new Date(i.date).toLocaleString()}
               </p>
             </div>
-            <div>
+            <div className="flex flex-col items-end gap-2">
               <span
-                className={`px-3 py-1 rounded-full text-sm ${
+                className={`px-3 py-1 rounded-full text-sm inline-block ${
                   i.status === "completed"
                     ? "bg-green-100 text-green-800"
                     : i.status === "in-progress"
@@ -69,6 +69,21 @@ export default function CandidateHistory() {
               >
                 {i.status}
               </span>
+              {i.status === "completed" && (
+                <button onClick={() => router.push(`/candidate/interview/${i._id}/result`)} className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors">
+                  View Result
+                </button>
+              )}
+              {i.status === "scheduled" && (
+                <button onClick={() => router.push(`/candidate/interview/${i._id}`)} className="text-sm bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded transition-colors">
+                   Start Interview
+                </button>
+              )}
+              {i.status === "in-progress" && (
+                <button onClick={() => router.push(`/candidate/interview/${i._id}/start`)} className="text-sm bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded transition-colors">
+                   Resume
+                </button>
+              )}
             </div>
           </div>
         ))}

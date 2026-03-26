@@ -61,6 +61,9 @@ app.use(
 app.use("/api/invites", require("./routes/inviteRoutes"));
 app.use("/api/interview", require("./routes/interview"));
 
+// Integrity monitoring routes
+app.use("/api/integrity", require("./routes/integrity"));
+
 // Root
 app.get("/", (req, res) => res.send("✅ SkillHire AI API Running..."));
 

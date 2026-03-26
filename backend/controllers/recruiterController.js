@@ -48,6 +48,7 @@ exports.getJobGroupCandidates = async (req, res) => {
         status: app.status,
         interviewStatus: ai?.status || "not-scheduled",
         aiOverallScore: ai?.overallScore || null,
+        interviewLogId: ai?._id || null,
       };
     });
 

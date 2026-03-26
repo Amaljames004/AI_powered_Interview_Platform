@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/utils/axios';
 
@@ -12,7 +12,8 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const { login } = useAuth(); // From AuthProvider
+  const searchParams = useSearchParams();
+  const { login, user } = useAuth(); // From AuthProvider
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -26,6 +27,12 @@ export default function Login() {
 
     try {
       await login(form.email, form.password); // calls login from AuthProvider
+      
+      const redirect = searchParams.get('redirect');
+      const token = searchParams.get('token');
+      if (redirect && token) {
+        router.push(`${redirect}?token=${token}`);
+      }
     } catch (err) {
       setError(err.message);
     } finally {

@@ -65,11 +65,10 @@ exports.uploadCSV = async (req, res) => {
       const candidate = await Candidate.findById(user.candidateProfile);
       if (!candidate) continue;
 
-      // Skip if candidate already scheduled
+      // Skip if candidate already has an interview log for this job group (any status)
       const existingLog = await AIInterviewLog.findOne({
         candidate: candidate._id,
-        jobGroup: jobGroupId,
-        status: { $in: ["scheduled", "in-progress"] }
+        jobGroup: jobGroupId
       });
       if (existingLog) continue;
 
@@ -120,16 +119,43 @@ exports.startInterview = async (req, res) => {
     if (!candidate || !jobGroup)
       return res.status(404).json({ message: "Candidate or Job Group not found" });
 
-    let log = await AIInterviewLog.findOne({
+    let existingLog = await AIInterviewLog.findOne({
+      candidate: candidateId,
+      jobGroup: jobGroupId
+    });
+
+    if (existingLog && existingLog.status === "completed") {
+      return res.status(403).json({ message: "Interview already completed. You cannot retake it." });
+    }
+
+    let log = existingLog || await AIInterviewLog.findOne({
       candidate: candidateId,
       jobGroup: jobGroupId,
       status: { $in: ["scheduled", "in-progress"] },
     });
 
+    // Enforce scheduled time window
+    if (log && log.status === "scheduled" && log.startTime && log.endTime) {
+      const now = new Date();
+      const startWindow = new Date(log.startTime);
+      startWindow.setMinutes(startWindow.getMinutes() - 5); // 5 min buffer
+
+      const endWindow = new Date(log.endTime);
+
+      if (now < startWindow) {
+        return res.status(403).json({ message: "Interview is not yet open. Please wait until your scheduled time." });
+      }
+      if (now > endWindow) {
+        return res.status(403).json({ message: "The scheduled time for this interview has passed." });
+      }
+    }
+
     const requiresQuestions = !log || (log.questions && log.questions.length === 0);
 
     if (requiresQuestions) {
+      console.log("Generating questions for candidate:", candidateId, "skills:", candidate.skills);
       const questions = await generateQuestions(candidate.skills || []);
+      console.log(`✅ Successfully generated ${questions.length} questions for candidate ${candidateId}`);
       const formattedQuestions = questions.map(q => ({
         questionId: new mongoose.Types.ObjectId(),
         question: q,

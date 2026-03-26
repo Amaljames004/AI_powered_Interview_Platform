@@ -5,6 +5,7 @@ import { FiBriefcase, FiCode, FiUsers, FiCalendar, FiChevronRight } from 'react-
 import api from '@/utils/axios';
 import { useAuth } from '@/context/AuthProvider';
 import Link from 'next/link';
+import BackButton from '@/components/BackButton';
 
 // Custom loading spinner component
 const LoadingSpinner = () => (
@@ -105,7 +106,8 @@ export default function MyApplications() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="sm:flex sm:items-center sm:justify-between mb-8">
+        <BackButton href="/recruiter/dashboard" />
+        <div className="flex justify-between items-center bg-gray-900 text-white p-6 pb-20">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">My Job Groups</h1>
             <p className="mt-2 text-sm text-gray-600">

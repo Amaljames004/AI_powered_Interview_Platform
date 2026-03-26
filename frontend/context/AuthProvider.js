@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
         const inviteToken = localStorage.getItem('inviteToken');
         if (inviteToken) {
           try {
-            await api.post(`/application/apply/${inviteToken}`);
+            await api.post(`/application/applyy/${inviteToken}`);
             console.log('Applied via invite');
 
             // Clear invite token after applying

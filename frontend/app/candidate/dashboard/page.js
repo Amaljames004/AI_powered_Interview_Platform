@@ -117,11 +117,15 @@ export default function CandidateDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      {error && (
-        <div className="max-w-7xl mx-auto mb-4 p-4 bg-red-100 text-red-700 rounded-lg border border-red-200">
-          {error}
-        </div>
-      )}
+      <div className="max-w-7xl mx-auto">
+
+        {/* Header Section */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg border border-red-200">
+            {error}
+          </div>
+        )}
+      </div>
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Main Content */}

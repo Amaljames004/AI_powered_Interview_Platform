@@ -17,17 +17,16 @@ app.use((req, res, next) => {
 // Security
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
-// CORS Config — updated to handle Authorization headers and preflight
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : ["http://localhost:3000"];
-
 app.use(
   cors({
-    origin: "*", // ✅ allow all origins
+    origin: [
+      'http://localhost:3000',
+      'https://your-app.vercel.app',  // replace with your actual Vercel URL
+      /\.vercel\.app$/,               // allows all vercel preview URLs
+    ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // ✅ all CRUD methods
-    allowedHeaders: ["*"], // ✅ allow all headers (Authorization, Content-Type, etc.)
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['*'],
   })
 );
 
